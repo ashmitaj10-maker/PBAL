@@ -207,7 +207,8 @@ export type MealSlotType =
   | 'lunch'
   | 'snack'
   | 'dinner'
-  | 'sleep';
+  | 'sleep'
+  | (string & {});
 
 export type MealPlanMode = 'choice' | 'weekly';
 export type MealPlanStatus = 'draft' | 'published' | 'archived';
@@ -236,7 +237,7 @@ export interface MealOption {
   carbs: number;
   fat: number;
   fiber: number;
-  glycemicIndex: 'Low' | 'Medium' | 'High';
+  glycemicIndex: 'Low' | 'Medium' | 'High' | string;
   glycemicLoad?: number;
   ingredients: string[];
   instructions: string[];
@@ -254,10 +255,11 @@ export interface MealSlot {
   slotType: MealSlotType;
   slotName?: string;
   title?: string;
-  defaultTime: string; // e.g. "06:30"
-  options: MealOption[]; // 2-5 options in Choice Mode
+  defaultTime: string; // e.g. "06:30", "08:00 AM", "10:00 AM"
+  options: MealOption[]; // 1-5 options in Choice Mode
   selectedOptionId: string;
   notes?: string;
+  customIcon?: string;
 }
 
 export type ExerciseRoutineItem = ExerciseItem;
