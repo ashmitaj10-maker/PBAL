@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useClinic } from '../../context/ClinicContext';
 import { Camera, X, CheckCircle2, Image as ImageIcon, Calendar, Sparkles } from 'lucide-react';
 import { PhotoAngle, PhotoStage } from '../../types/clinic';
+import { PatientSelector } from './PatientSelector';
 
 const PHOTO_PRESETS = [
   {
@@ -104,24 +105,15 @@ export const UploadPhotoModal: React.FC = () => {
             
             {/* Patient & Date */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Select Patient</label>
-                <select
-                  value={patientId}
-                  onChange={(e) => {
-                    setPatientId(e.target.value);
-                    const p = (patients || []).find(pat => pat.id === e.target.value);
-                    if (p) setWeightKg(p.currentWeightKg);
-                  }}
-                  className="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-teal-500 bg-white"
-                >
-                  {(patients || []).map(pat => (
-                    <option key={pat.id} value={pat.id}>
-                      {pat.name} ({pat.patientCode})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <PatientSelector
+                variant="form"
+                label="Select Patient"
+                selectedPatientId={patientId}
+                onSelect={(p) => {
+                  setPatientId(p.id);
+                  setWeightKg(p.currentWeightKg);
+                }}
+              />
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Date Taken</label>

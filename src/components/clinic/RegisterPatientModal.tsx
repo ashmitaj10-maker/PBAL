@@ -1115,7 +1115,7 @@ export const RegisterPatientModal: React.FC = () => {
                     <span>Correct Errors to Save</span>
                   </>
                 ) : (
-                  <span>Register & Open Dossier</span>
+                  <span>Register & Open Profile</span>
                 )}
               </button>
             </div>

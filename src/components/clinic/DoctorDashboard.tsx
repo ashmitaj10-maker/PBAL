@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useClinic } from '../../context/ClinicContext';
 import { 
   Users, 
@@ -26,7 +26,8 @@ import {
   PieChart as PieChartIcon,
   TrendingDown,
   ArrowRight,
-  PhoneCall
+  PhoneCall,
+  KeyRound
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -40,6 +41,7 @@ import {
   Pie, 
   Cell 
 } from 'recharts';
+import { IssuePatientCodeModal } from './IssuePatientCodeModal';
 
 export const DoctorDashboard: React.FC = () => {
   const { 
@@ -63,6 +65,7 @@ export const DoctorDashboard: React.FC = () => {
   const kpis = getDashboardKpis();
   const conversations = getAllConversationsSummary();
   const unreadConversations = conversations.filter(c => c.unreadCount > 0);
+  const [isIssueCodeModalOpen, setIsIssueCodeModalOpen] = useState(false);
 
   // Financial Chart Data
   const revenueChartData = [
@@ -144,8 +147,16 @@ export const DoctorDashboard: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setIsIssueCodeModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+          >
+            <KeyRound className="w-4 h-4 text-teal-200" />
+            <span>Issue Patient Code</span>
+          </button>
+
+          <button
             onClick={() => setIsRegisterModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white text-slate-950 hover:bg-slate-100 text-xs font-bold transition-all shadow-md"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white text-slate-950 hover:bg-slate-100 text-xs font-bold transition-all shadow-md cursor-pointer"
           >
             <UserPlus className="w-4 h-4 text-teal-700" />
             <span>Register Patient</span>
@@ -584,6 +595,12 @@ export const DoctorDashboard: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Issue Patient Registration Code Modal */}
+      <IssuePatientCodeModal 
+        isOpen={isIssueCodeModalOpen} 
+        onClose={() => setIsIssueCodeModalOpen(false)} 
+      />
 
     </div>
   );

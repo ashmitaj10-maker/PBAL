@@ -13,6 +13,7 @@ import {
   Layers,
   Sparkles
 } from 'lucide-react';
+import { PatientSelector } from './PatientSelector';
 
 export const RecordPaymentModal: React.FC = () => {
   const { 
@@ -126,22 +127,12 @@ export const RecordPaymentModal: React.FC = () => {
         <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
           
           {/* Patient Selection */}
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">
-              Select Patient *
-            </label>
-            <select
-              value={patientId}
-              onChange={(e) => setPatientId(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[#183153] font-bold focus:ring-2 focus:ring-[#6BBF59]/30 outline-none"
-            >
-              {(patients || []).map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.patientCode} • {p.mobile})
-                </option>
-              ))}
-            </select>
-          </div>
+          <PatientSelector
+            variant="form"
+            label="Select Patient *"
+            selectedPatientId={patientId}
+            onSelect={(p) => setPatientId(p.id)}
+          />
 
           {/* Plan Selection */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

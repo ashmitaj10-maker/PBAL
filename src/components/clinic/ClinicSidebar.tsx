@@ -57,7 +57,6 @@ export const ClinicSidebar: React.FC<ClinicSidebarProps> = ({
     getDashboardKpis
   } = useClinic();
 
-  const [isClinicMenuOpen, setIsClinicMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{ id: string; name: string; patientCode: string; mobile: string }[]>([]);
@@ -193,51 +192,6 @@ export const ClinicSidebar: React.FC<ClinicSidebarProps> = ({
               <X className="w-5 h-5" />
             </button>
           </div>
-
-          {/* Clinic Switcher */}
-          {!isCollapsed && (
-            <div className="relative mt-3">
-              <button
-                onClick={() => setIsClinicMenuOpen(!isClinicMenuOpen)}
-                className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 text-xs text-slate-200 transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-2 truncate">
-                  <Building2 className="w-4 h-4 text-teal-400 shrink-0" />
-                  <span className="truncate font-medium">{currentClinic?.name || 'Main Clinic'}</span>
-                </div>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              </button>
-
-              {isClinicMenuOpen && (
-                <div 
-                  className="absolute left-0 right-0 mt-1 bg-slate-800 rounded-xl shadow-2xl border border-slate-700 py-1.5 text-slate-200 z-50 animate-in fade-in"
-                  onMouseLeave={() => setIsClinicMenuOpen(false)}
-                >
-                  <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-700/60">
-                    Switch Clinic Branch
-                  </div>
-                  {(clinics || []).map(c => (
-                    <button
-                      key={c.id}
-                      onClick={() => {
-                        switchClinic(c.id);
-                        setIsClinicMenuOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 hover:bg-slate-700/60 flex items-start gap-2.5 text-xs transition-colors cursor-pointer ${
-                        c.id === currentClinic?.id ? 'bg-teal-900/40 text-teal-300 font-bold' : 'text-slate-300'
-                      }`}
-                    >
-                      <Building2 className={`w-4 h-4 mt-0.5 shrink-0 ${c.id === currentClinic?.id ? 'text-teal-400' : 'text-slate-500'}`} />
-                      <div className="truncate">
-                        <div className="truncate font-medium">{c.name}</div>
-                        <div className="text-[10px] text-slate-400">{c.city} • {c.code}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Quick Patient Search (When Expanded) */}
@@ -276,42 +230,6 @@ export const ClinicSidebar: React.FC<ClinicSidebarProps> = ({
                 ))}
               </div>
             )}
-          </div>
-        )}
-
-        {/* Active Patient Quick Card (When a Patient is Selected) */}
-        {!isCollapsed && selectedPatient && (
-          <div className="px-3 py-2 border-b border-slate-800/80 bg-teal-950/30">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-teal-400 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
-                Active Dossier
-              </span>
-              <button 
-                onClick={() => handleNavClick('patient_profile')}
-                className="text-[10px] text-slate-400 hover:text-teal-300 flex items-center gap-0.5 cursor-pointer"
-              >
-                View <ChevronRight className="w-2.5 h-2.5" />
-              </button>
-            </div>
-            <div 
-              onClick={() => handleNavClick('patient_profile')}
-              className="p-2 rounded-xl bg-slate-800/90 border border-teal-500/20 hover:border-teal-500/40 transition-all cursor-pointer group"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-teal-600/30 text-teal-300 font-bold text-xs flex items-center justify-center border border-teal-500/30 shrink-0">
-                  {(selectedPatient?.name || 'Patient').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2) || 'PT'}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-bold text-white truncate group-hover:text-teal-300 transition-colors">
-                    {selectedPatient?.name || 'Patient'}
-                  </div>
-                  <div className="text-[10px] text-slate-400 truncate">
-                    {selectedPatient?.patientCode || ''} • {selectedPatient?.foodPreference || 'Prescribed'}
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         )}
 

@@ -17,6 +17,7 @@ import {
   User
 } from 'lucide-react';
 import { BodyMeasurementsRecord } from '../../types/clinic';
+import { PatientSelector } from './PatientSelector';
 
 type MetricTab = 'weight_bmi' | 'waist_hip' | 'arms_chest' | 'all';
 type DateFilter = '30d' | '90d' | '180d' | 'all';
@@ -30,7 +31,8 @@ export const ProgressDashboardView: React.FC = () => {
     getPatientPhotos, 
     setIsMeasurementModalOpen,
     setIsPhotoModalOpen,
-    navigateTo 
+    navigateTo,
+    isPatientSession 
   } = useClinic();
 
   const [activeTab, setActiveTab] = useState<MetricTab>('weight_bmi');
@@ -103,19 +105,29 @@ export const ProgressDashboardView: React.FC = () => {
     }
   };
 
+  const getMetricLabel = () => {
+    switch (activeTab) {
+      case 'weight_bmi': return 'Weight (kg)';
+      case 'waist_hip': return 'Waist (Inches)';
+      case 'arms_chest': return 'Arm Circumference (Inches)';
+      default: return 'Weight (kg)';
+    }
+  };
+
   const currentMetricKey = getMetricKey();
-  const values = chartData.map(d => (d as any)[currentMetricKey] as number);
-  const minVal = Math.min(...values) * 0.96;
-  const maxVal = Math.max(...values) * 1.04;
+  const values = chartData.map(d => Number((d as any)[currentMetricKey] || 0));
+  const minVal = Math.min(...values) - 1;
+  const maxVal = Math.max(...values) + 1;
+  const range = Math.max(maxVal - minVal, 1);
 
   const getCoordinates = (index: number, val: number) => {
     const x = paddingX + (index / Math.max(1, chartData.length - 1)) * (chartWidth - paddingX * 2);
-    const y = chartHeight - paddingY - ((val - minVal) / Math.max(0.1, (maxVal - minVal))) * (chartHeight - paddingY * 2);
+    const y = chartHeight - paddingY - ((val - minVal) / range) * (chartHeight - paddingY * 2);
     return { x, y };
   };
 
   const points = chartData.map((d, idx) => {
-    const val = (d as any)[currentMetricKey] as number;
+    const val = Number((d as any)[currentMetricKey] || 0);
     return getCoordinates(idx, val);
   });
 
@@ -130,51 +142,44 @@ export const ProgressDashboardView: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       
-      {/* Top Header & Patient Selector */}
+      {/* Top Header & Patient Actions */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-teal-600 mb-1">
             <TrendingDown className="w-4 h-4" />
-            Patient Clinical Engagement • Phase 3
+            {isPatientSession ? 'My Personal Health Transformation' : 'Patient Clinical Engagement • Phase 3'}
           </div>
-          <h1 className="text-2xl font-black text-slate-900">Progress & Body Composition Dashboard</h1>
+          <h1 className="text-2xl font-black text-slate-900">
+            {isPatientSession ? 'My Scale Progress & Body Transformation' : 'Progress & Body Composition Dashboard'}
+          </h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Longitudinal anthropometric tracking, visceral fat reduction, and transformation milestones
+            {isPatientSession 
+              ? 'Visual scale weight curve, circumference reductions, and metabolic milestones tracked over time.'
+              : 'Longitudinal anthropometric tracking, visceral fat reduction, and transformation milestones.'
+            }
           </p>
         </div>
 
         {/* Patient Switcher & CTA Buttons */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-xs">
-            <User className="w-4 h-4 text-teal-600 shrink-0" />
-            <div className="flex flex-col">
-              <span className="text-[9px] uppercase font-bold text-slate-400 leading-none">Select Patient</span>
-              <select
-                value={currentPatient?.id}
-                onChange={(e) => setSelectedPatientId(e.target.value)}
-                className="bg-transparent text-xs sm:text-sm font-bold text-slate-800 focus:outline-none cursor-pointer pr-1"
-              >
-                {(patients || []).map(p => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.patientCode})</option>
-                ))}
-              </select>
-            </div>
-          </div>
+          {!isPatientSession && <PatientSelector />}
+
+          {!isPatientSession && (
+            <button
+              onClick={() => setIsMeasurementModalOpen(true)}
+              className="px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 rounded-xl shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              Log Measurements
+            </button>
+          )}
 
           <button
-            onClick={() => setIsMeasurementModalOpen(true)}
-            className="px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 rounded-xl shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            Log Measurements
-          </button>
-
-          <button
-            onClick={() => navigateTo('progress_photos', { patientId: currentPatient?.id })}
+            onClick={() => navigateTo('patient_chat')}
             className="px-4 py-2 text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
           >
-            <Camera className="w-4 h-4" />
-            Photos ({photos.length})
+            <Activity className="w-4 h-4" />
+            <span>Discuss with Dietitian</span>
           </button>
         </div>
       </div>

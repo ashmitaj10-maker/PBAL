@@ -28,6 +28,7 @@ import {
   generateHeuristicFoodSwapsForAllPreferences,
   CRAVING_KNOWLEDGE_BASE
 } from '../../data/foodSwapsGenerator';
+import { PatientSelector } from './PatientSelector';
 
 type CopilotTab = 'food_swaps' | 'nutrient_gaps' | 'motivation' | 'soap_summary';
 
@@ -69,7 +70,8 @@ export const AiCopilotView: React.FC = () => {
     sendChatMessage, 
     generateCopilotMotivation, 
     generateCopilotProgressSummary,
-    navigateTo 
+    navigateTo,
+    isPatientSession
   } = useClinic();
 
   const [activeTab, setActiveTab] = useState<CopilotTab>('food_swaps');
@@ -125,71 +127,87 @@ export const AiCopilotView: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          craving: clean,
-          patientName: currentPatient?.name,
-          patientGoal: currentPatient?.primaryGoal,
-          patientFoodPreference: currentPatient?.foodPreference
+          cravingQuery: clean,
+          foodPreference: selectedPreference === 'All' ? currentPatient?.foodPreference || 'Vegetarian' : selectedPreference,
+          patientGoals: currentPatient?.primaryGoals,
+          patientMedical: currentPatient?.medicalConditions
         }),
         signal: abortControllerRef.current.signal
       });
 
       if (response.ok) {
         const data = await response.json();
-        if (data.success && Array.isArray(data.swaps) && data.swaps.length > 0) {
-          setAiGeneratedPayload({
-            craving: data.craving || clean,
-            category: data.category || 'Smart Food Swaps',
-            originalDish: data.originalDish,
-            swaps: data.swaps
-          });
+        if (data.swaps && data.swaps.length > 0) {
+          setAiGeneratedPayload(data);
         }
       }
     } catch (err: any) {
       if (err.name !== 'AbortError') {
-        console.warn('AI Food Swap query completed with fallback:', err);
+        console.log('Smart food swap fallback active:', err.message);
       }
     } finally {
       setIsAiLoading(false);
     }
   };
 
-  // Debounced trigger when user types in the craving search field
   useEffect(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-
-    if (cravingQuery.trim()) {
-      // Immediate local sync + debounced server AI call
-      const instant = generateHeuristicFoodSwapsForAllPreferences(cravingQuery.trim(), currentPatient?.foodPreference);
-      setAiGeneratedPayload(instant);
-
-      debounceTimerRef.current = setTimeout(() => {
-        fetchSmartFoodSwaps(cravingQuery);
-      }, 450);
-    } else {
-      setAiGeneratedPayload(null);
-    }
-
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, [cravingQuery, currentPatient?.foodPreference]);
-
-  // Initial boot load on mount
-  useEffect(() => {
-    fetchSmartFoodSwaps(cravingQuery || 'Pizza');
+    fetchSmartFoodSwaps(cravingQuery);
   }, []);
 
-  // Initialize generators on tab or patient switch
-  useEffect(() => {
-    if (currentPatient) {
-      setGeneratedMotivation(generateCopilotMotivation(currentPatient.id, motivationTone));
-      setGeneratedSoap(generateCopilotProgressSummary(currentPatient.id));
-    }
-  }, [currentPatient?.id, motivationTone]);
+  const handleSearchChange = (val: string) => {
+    setCravingQuery(val);
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      fetchSmartFoodSwaps(val);
+    }, 280);
+  };
+
+  const handleSelectQuickCraving = (q: string) => {
+    setCravingQuery(q);
+    fetchSmartFoodSwaps(q);
+  };
+
+  const handleCopy = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  const handleSendSwapToPatientChat = (swap: FoodSwapSuggestion) => {
+    if (!currentPatient) return;
+    const msg = `Craving alternative for *${swap.cravingOrDish}*: Check out *${swap.swapOptionName || swap.clinicalSwap}*! It has ${swap.swapCalories} kcal (saves ${swap.calorieSaving} kcal) with ${swap.swapProteinGrams}g protein. ${swap.clinicalReason || swap.preparationTip}`;
+    sendChatMessage({
+      patientId: currentPatient.id,
+      content: msg,
+      sender: isPatientSession ? 'patient' : 'doctor'
+    });
+    setSentToChatKey(swap.id);
+    setTimeout(() => setSentToChatKey(null), 2500);
+  };
+
+  const handleSendToChat = (text: string, key: string) => {
+    if (!currentPatient) return;
+    sendChatMessage({
+      patientId: currentPatient.id,
+      content: text,
+      type: 'text',
+      sender: isPatientSession ? 'patient' : 'doctor'
+    });
+    setSentToChatKey(key);
+    setTimeout(() => setSentToChatKey(null), 2500);
+  };
+
+  const handleGenerateMotivation = () => {
+    if (!currentPatient) return;
+    const text = generateCopilotMotivation(currentPatient.id, motivationTone);
+    setGeneratedMotivation(text);
+  };
+
+  const handleGenerateSoap = () => {
+    if (!currentPatient) return;
+    const text = generateCopilotProgressSummary(currentPatient.id);
+    setGeneratedSoap(text);
+  };
 
   // Filtered list of swaps for display based on selected Food Preference filter
   const displayedSwaps = useMemo(() => {
@@ -208,57 +226,35 @@ export const AiCopilotView: React.FC = () => {
     });
   }, [aiGeneratedPayload, foodSwapsCatalog, selectedPreference]);
 
-  const handleCopy = (text: string, key: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedKey(key);
-    setTimeout(() => setCopiedKey(null), 1500);
-  };
-
-  const handleSendToChat = (text: string, key: string) => {
-    if (!currentPatient) return;
-    sendChatMessage({
-      patientId: currentPatient.id,
-      content: text,
-      type: 'text',
-      sender: 'doctor'
-    });
-    setSentToChatKey(key);
-    setTimeout(() => setSentToChatKey(null), 2000);
-  };
-
   const currentPatientPref = currentPatient?.foodPreference || 'Vegetarian';
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
+    <div className="space-y-6 pb-12">
       
       {/* Top Header */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-teal-600 mb-1">
             <Bot className="w-4 h-4" />
-            Clinical AI Assistant • Doctor Copilot
+            {isPatientSession ? 'Doctor AI Copilot • Craving & Healthy Swap Assistant' : 'Clinical AI Assistant • Doctor Copilot'}
           </div>
-          <h1 className="text-2xl font-black text-slate-900">Doctor AI Copilot & Nutrition Intelligence</h1>
+          <h1 className="text-2xl font-black text-slate-900">
+            {isPatientSession ? 'Search Cravings & Discover Healthy Swaps' : 'Doctor AI Copilot & Nutrition Intelligence'}
+          </h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Real-time multi-preference craving replacements, biochemical nutrient gap diagnostics, compliance messaging & SOAP digests
+            {isPatientSession 
+              ? 'Search any food craving to find delicious, dietitian-approved healthy alternatives aligned with your health plan.'
+              : 'Real-time multi-preference craving replacements, biochemical nutrient gap diagnostics, compliance messaging & SOAP digests.'
+            }
           </p>
         </div>
 
-        {/* Patient Switcher */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200">
-            <User className="w-4 h-4 text-slate-400" />
-            <select
-              value={currentPatient?.id}
-              onChange={(e) => setSelectedPatientId(e.target.value)}
-              className="bg-transparent text-sm font-semibold text-slate-800 focus:outline-none cursor-pointer"
-            >
-              {(patients || []).map(p => (
-                <option key={p.id} value={p.id}>{p.name} ({p.patientCode}) • {p.foodPreference}</option>
-              ))}
-            </select>
+        {/* Patient Switcher (Only visible to Doctors) */}
+        {!isPatientSession && (
+          <div className="flex items-center gap-3">
+            <PatientSelector />
           </div>
-        </div>
+        )}
       </div>
 
       {/* Primary Navigation Tabs */}
@@ -272,20 +268,22 @@ export const AiCopilotView: React.FC = () => {
           }`}
         >
           <ChefHat className="w-4 h-4 text-teal-600" />
-          Smart Food Swaps & Craving Replacer
+          {isPatientSession ? 'Craving Search & Smart Food Swaps' : 'Smart Food Swaps & Craving Replacer'}
         </button>
 
-        <button
-          onClick={() => setActiveTab('nutrient_gaps')}
-          className={`px-4 py-2.5 text-xs font-bold rounded-t-xl border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'nutrient_gaps'
-              ? 'border-teal-600 text-teal-900 bg-teal-50/50'
-              : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-          }`}
-        >
-          <Zap className="w-4 h-4 text-amber-500" />
-          Biochemical Nutrient Gaps ({nutrientGapsTemplates.length})
-        </button>
+        {!isPatientSession && (
+          <button
+            onClick={() => setActiveTab('nutrient_gaps')}
+            className={`px-4 py-2.5 text-xs font-bold rounded-t-xl border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'nutrient_gaps'
+                ? 'border-teal-600 text-teal-900 bg-teal-50/50'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <Zap className="w-4 h-4 text-amber-500" />
+            Biochemical Nutrient Gaps ({nutrientGapsTemplates.length})
+          </button>
+        )}
 
         <button
           onClick={() => setActiveTab('motivation')}
@@ -296,20 +294,22 @@ export const AiCopilotView: React.FC = () => {
           }`}
         >
           <Sparkles className="w-4 h-4 text-purple-600" />
-          Motivation & Compliance Generator
+          {isPatientSession ? 'Daily Motivation & Mindset' : 'Motivation & Compliance Generator'}
         </button>
 
-        <button
-          onClick={() => setActiveTab('soap_summary')}
-          className={`px-4 py-2.5 text-xs font-bold rounded-t-xl border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'soap_summary'
-              ? 'border-teal-600 text-teal-900 bg-teal-50/50'
-              : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-          }`}
-        >
-          <FileText className="w-4 h-4 text-emerald-600" />
-          Longitudinal SOAP Digest
-        </button>
+        {!isPatientSession && (
+          <button
+            onClick={() => setActiveTab('soap_summary')}
+            className={`px-4 py-2.5 text-xs font-bold rounded-t-xl border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'soap_summary'
+                ? 'border-teal-600 text-teal-900 bg-teal-50/50'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <FileText className="w-4 h-4 text-emerald-600" />
+            Longitudinal SOAP Digest
+          </button>
+        )}
       </div>
 
       {/* TAB 1: SMART FOOD SWAPS & CRAVING REPLACER ACROSS ALL FOOD PREFERENCES */}
@@ -648,13 +648,15 @@ export const AiCopilotView: React.FC = () => {
 
                     <button
                       onClick={() => handleSendToChat(
-                        `🥗 Smart Food Swap for ${swap.cravingOrDish} (${swap.foodPreference}):\nCraving ${swap.cravingOrDish}? Swap it with ${swapTitle}! You'll save ${calSavings} calories, enjoy ${swapProt}g protein, and maintain optimal insulin sensitivity. Prep: ${prepInstructions}`,
+                        isPatientSession
+                          ? `Hi Doctor! I'm craving ${swap.cravingOrDish}. Can I make this healthy swap: *${swapTitle}* (Saves ${calSavings} kcal, ${swapProt}g protein)?`
+                          : `🥗 Smart Food Swap for ${swap.cravingOrDish} (${swap.foodPreference}):\nCraving ${swap.cravingOrDish}? Swap it with ${swapTitle}! You'll save ${calSavings} calories, enjoy ${swapProt}g protein, and maintain optimal insulin sensitivity. Prep: ${prepInstructions}`,
                         swapKey
                       )}
-                      className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
+                      className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
                     >
                       {sentToChatKey === swapKey ? <Check className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
-                      {sentToChatKey === swapKey ? 'Sent into Chat!' : 'Send to Patient'}
+                      {sentToChatKey === swapKey ? 'Sent into Chat!' : isPatientSession ? 'Ask Dietitian About Swap' : 'Send to Patient'}
                     </button>
                   </div>
 

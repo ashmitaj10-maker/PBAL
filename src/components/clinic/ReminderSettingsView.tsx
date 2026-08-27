@@ -19,6 +19,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { PatientReminderConfig, ReminderType } from '../../types/clinic';
+import { PatientSelector } from './PatientSelector';
 
 export const ReminderSettingsView: React.FC = () => {
   const { 
@@ -90,20 +91,7 @@ export const ReminderSettingsView: React.FC = () => {
 
         {/* Patient Switcher */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200">
-            <User className="w-4 h-4 text-slate-400" />
-            <select
-              value={currentPatient?.id}
-              onChange={(e) => {
-                setSelectedPatientId(e.target.value);
-              }}
-              className="bg-transparent text-sm font-semibold text-slate-800 focus:outline-none cursor-pointer"
-            >
-              {(patients || []).map(p => (
-                <option key={p.id} value={p.id}>{p.name} ({p.patientCode})</option>
-              ))}
-            </select>
-          </div>
+          <PatientSelector />
         </div>
       </div>
 

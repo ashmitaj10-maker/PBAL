@@ -33,7 +33,8 @@ import {
   Bot,
   Mic,
   Save,
-  Check
+  Check,
+  ShieldCheck
 } from 'lucide-react';
 import { 
   LineChart, 
@@ -46,6 +47,7 @@ import {
   ReferenceLine
 } from 'recharts';
 import { VoiceRecorderAndPlayer } from './VoiceRecorderAndPlayer';
+import { PatientSelector } from './PatientSelector';
 
 export const PatientProfileView: React.FC = () => {
   const { 
@@ -61,7 +63,9 @@ export const PatientProfileView: React.FC = () => {
     currentClinic,
     getPatientAssessments,
     getActiveMealPlan,
-    getPatientExercisePlan
+    getPatientExercisePlan,
+    isPatientSession,
+    users
   } = useClinic();
 
   const [activeProfileTab, setActiveProfileTab] = useState<'overview' | 'nutrition_ai' | 'weight' | 'billing'>('overview');
@@ -75,19 +79,20 @@ export const PatientProfileView: React.FC = () => {
         <User className="w-12 h-12 text-slate-300 mx-auto" />
         <h2 className="text-lg font-bold text-[#183153]">No Patient Selected</h2>
         <p className="text-xs text-slate-500 max-w-sm mx-auto">
-          Please select a patient from the patient directory to view their clinical dossier.
+          Please select a patient from the patient directory to view their clinical profile.
         </p>
         <button
-          onClick={() => navigateTo('patients')}
+          onClick={() => navigateTo(isPatientSession ? 'patient_portal' : 'patients')}
           className="px-4 py-2 bg-[#183153] text-white rounded-xl text-xs font-semibold"
         >
-          Go to Patient Directory
+          {isPatientSession ? 'Go to Patient Dashboard' : 'Go to Patient Directory'}
         </button>
       </div>
     );
   }
 
   const patient = selectedPatient;
+  const assignedDietician = (users || []).find(u => u.id === patient?.assignedDoctorId) || users[0];
   const bmiInfo = calculateBmi(patient.currentWeightKg, patient.heightCm);
   const startBmiInfo = calculateBmi(patient.startingWeightKg, patient.heightCm);
   const weightHistory = getPatientWeightHistory(patient.id);
@@ -116,6 +121,7 @@ export const PatientProfileView: React.FC = () => {
   }));
 
   const handleSavePatientAudio = (audioUrl: string, durationSeconds: number) => {
+    if (isPatientSession) return;
     const dateStr = new Date().toLocaleDateString('en-IN', {
       day: 'numeric',
       month: 'short',
@@ -131,6 +137,7 @@ export const PatientProfileView: React.FC = () => {
   };
 
   const handleDeletePatientAudio = () => {
+    if (isPatientSession) return;
     updatePatient(patient.id, {
       voiceAudioUrl: undefined,
       voiceAudioDuration: 0,
@@ -139,11 +146,13 @@ export const PatientProfileView: React.FC = () => {
   };
 
   const handleStartEditNotes = () => {
+    if (isPatientSession) return;
     setEditedNotes(patient.consultationNotes || patient.notes || '');
     setIsEditingNotes(true);
   };
 
   const handleSaveNotes = () => {
+    if (isPatientSession) return;
     updatePatient(patient.id, {
       notes: editedNotes.trim(),
       consultationNotes: editedNotes.trim()
@@ -156,67 +165,97 @@ export const PatientProfileView: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       
-      {/* Back Button & Top Action Strip */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <button
-          onClick={() => navigateTo('patients')}
-          className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-[#183153] transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Patient Directory</span>
-        </button>
-
-        {/* Phase 2 Quick Action Buttons */}
-        <div className="flex items-center flex-wrap gap-2">
-          <button
-            onClick={() => navigateTo('assessment', { patientId: patient.id })}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#183153] text-xs font-semibold transition-colors cursor-pointer"
-          >
-            <ClipboardCheck className="w-3.5 h-3.5 text-[#6BBF59]" />
-            <span>Assessment Intake</span>
-          </button>
+      {/* Top Action Strip */}
+      {isPatientSession ? (
+        <div className="p-4 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-teal-950">
+                Supervised Health Profile (Read-Only)
+              </h3>
+              <p className="text-xs text-teal-800">
+                Medically managed by <strong>{assignedDietician?.name || 'Dr. Ashmita Joshi'}</strong>. Contact your dietitian to request changes.
+              </p>
+            </div>
+          </div>
 
           <button
-            onClick={() => navigateTo('ai_meal_builder', { patientId: patient.id })}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 text-xs font-semibold transition-colors cursor-pointer"
+            onClick={() => navigateTo('patient_chat')}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
           >
-            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-            <span>AI Meal Builder</span>
-          </button>
-
-          <button
-            onClick={() => navigateTo('exercise_planner', { patientId: patient.id })}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-semibold transition-colors cursor-pointer"
-          >
-            <Dumbbell className="w-3.5 h-3.5 text-amber-600" />
-            <span>Exercise Planner</span>
-          </button>
-
-          <button
-            onClick={() => navigateTo('patient_chat', { patientId: patient.id })}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200 text-xs font-semibold transition-colors cursor-pointer"
-          >
-            <MessageSquare className="w-3.5 h-3.5 text-teal-600" />
-            <span>In-App Chat</span>
-          </button>
-
-          <button
-            onClick={() => navigateTo('ai_copilot', { patientId: patient.id })}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200 text-xs font-semibold transition-colors cursor-pointer"
-          >
-            <Bot className="w-3.5 h-3.5 text-teal-600" />
-            <span>Doctor Copilot</span>
-          </button>
-
-          <button
-            onClick={() => navigateTo('patient_portal', { patientId: patient.id })}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#6BBF59] hover:bg-[#5EAB4D] text-white text-xs font-bold transition-all cursor-pointer shadow-xs"
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>Patient App Preview</span>
+            <MessageSquare className="w-4 h-4" />
+            <span>Message Dietitian</span>
           </button>
         </div>
-      </div>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center flex-wrap gap-2.5">
+            <button
+              onClick={() => navigateTo('patients')}
+              className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-[#183153] transition-colors cursor-pointer py-1.5"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Back to Patient Directory</span>
+              <span className="sm:hidden">Directory</span>
+            </button>
+            <PatientSelector />
+          </div>
+
+          {/* Doctor Quick Action Buttons */}
+          <div className="flex items-center flex-wrap gap-2">
+            <button
+              onClick={() => navigateTo('assessment', { patientId: patient.id })}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#183153] text-xs font-semibold transition-colors cursor-pointer"
+            >
+              <ClipboardCheck className="w-3.5 h-3.5 text-[#6BBF59]" />
+              <span>Assessment Intake</span>
+            </button>
+
+            <button
+              onClick={() => navigateTo('ai_meal_builder', { patientId: patient.id })}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 text-xs font-semibold transition-colors cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+              <span>AI Meal Builder</span>
+            </button>
+
+            <button
+              onClick={() => navigateTo('exercise_planner', { patientId: patient.id })}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-semibold transition-colors cursor-pointer"
+            >
+              <Dumbbell className="w-3.5 h-3.5 text-amber-600" />
+              <span>Exercise Planner</span>
+            </button>
+
+            <button
+              onClick={() => navigateTo('patient_chat', { patientId: patient.id })}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200 text-xs font-semibold transition-colors cursor-pointer"
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-teal-600" />
+              <span>In-App Chat</span>
+            </button>
+
+            <button
+              onClick={() => navigateTo('ai_copilot', { patientId: patient.id })}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200 text-xs font-semibold transition-colors cursor-pointer"
+            >
+              <Bot className="w-3.5 h-3.5 text-teal-600" />
+              <span>Doctor Copilot</span>
+            </button>
+
+            <button
+              onClick={() => navigateTo('patient_portal', { patientId: patient.id })}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#6BBF59] hover:bg-[#5EAB4D] text-white text-xs font-bold transition-all cursor-pointer shadow-xs"
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Patient App Preview</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* PATIENT SUMMARY DOSSIER BANNER */}
       <div className="medical-card p-6 bg-gradient-to-r from-[#183153] to-[#244673] text-white rounded-2xl shadow-md">
@@ -285,7 +324,7 @@ export const PatientProfileView: React.FC = () => {
               activeProfileTab === 'overview' ? 'bg-white text-[#183153]' : 'text-slate-300 hover:text-white hover:bg-white/10'
             }`}
           >
-            Clinical Overview & Dossier
+            Clinical Overview & Profile
           </button>
           <button
             onClick={() => setActiveProfileTab('nutrition_ai')}

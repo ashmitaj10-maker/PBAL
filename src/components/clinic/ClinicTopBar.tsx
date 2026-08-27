@@ -65,7 +65,7 @@ export const ClinicTopBar: React.FC<ClinicTopBarProps> = ({
       case 'patients':
         return 'Patient Directory & Registry';
       case 'patient_profile':
-        return selectedPatient ? `${selectedPatient.name} • Clinical Dossier` : 'Patient Profile';
+        return selectedPatient ? `${selectedPatient.name} • Clinical Profile` : 'Patient Profile';
       case 'assessment':
         return 'Clinical Intake & Anthropometrics';
       case 'ai_meal_builder':

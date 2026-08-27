@@ -596,3 +596,30 @@ export interface ExpiringPlanItem {
   status: 'expiring_soon' | 'critical_renewal' | 'expired';
 }
 
+export interface PatientCodeInvite {
+  code: string;
+  issuedByDieticianId: string;
+  dieticianName: string;
+  dieticianTitle?: string;
+  clinicId: string;
+  patientName?: string;
+  patientEmail?: string;
+  patientMobile?: string;
+  preAssignedPlanId?: string;
+  preAssignedPlanName?: string;
+  status: 'valid' | 'used' | 'expired';
+  createdAt: string;
+  expiresAt: string;
+  usedByPatientId?: string;
+  usedAt?: string;
+}
+
+export interface PatientSignUpInput {
+  emailOrPhone: string;
+  password: string;
+  confirmPassword: string;
+  patientCode: string;
+  name?: string;
+}
+
+

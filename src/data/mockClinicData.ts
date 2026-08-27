@@ -1,4 +1,4 @@
-import { Clinic, User, Patient, WeightRecord, ClinicPlan, PaymentRecord, Invoice, ClinicActivity } from '../types/clinic';
+import { Clinic, User, Patient, WeightRecord, ClinicPlan, PaymentRecord, Invoice, ClinicActivity, PatientCodeInvite } from '../types/clinic';
 import { generateSampleClinicalAudioDataUrl } from '../utils/audioUtils';
 
 const SAMPLE_CLINICAL_AUDIO = generateSampleClinicalAudioDataUrl(8);
@@ -6,28 +6,14 @@ const SAMPLE_CLINICAL_AUDIO = generateSampleClinicalAudioDataUrl(8);
 export const INITIAL_CLINICS: Clinic[] = [
   {
     id: 'clinic-1',
-    name: 'Perfect Body & Life Clinic — Bandra West',
-    code: 'PBL-MUM-01',
+    name: 'Perfect Body & Life',
+    code: 'PBL-01',
     tagline: 'Centre for Advanced Clinical Nutrition & Metabolic Health',
-    address: 'Suite 402, Pinnacle Medical Arcade, Linking Road, Bandra West',
-    city: 'Mumbai, Maharashtra 400050',
+    address: 'Medical Arcade, Linking Road',
+    city: 'Maharashtra',
     phone: '+91 98201 54321',
-    email: 'bandra@perfectbodyandlife.com',
+    email: 'contact@perfectbodyandlife.com',
     taxNumber: 'GSTIN: 27AABCP8841M1Z5',
-    currencySymbol: '₹',
-    currencyCode: 'INR',
-    logoText: 'PBL CLINICAL'
-  },
-  {
-    id: 'clinic-2',
-    name: 'Perfect Body & Life Clinic — Indiranagar',
-    code: 'PBL-BLR-02',
-    tagline: 'Metabolic Syndrome & Lifestyle Endocrinology Care',
-    address: '100ft Road, Opposite Defence Colony Club, Indiranagar',
-    city: 'Bengaluru, Karnataka 560038',
-    phone: '+91 98450 78912',
-    email: 'indiranagar@perfectbodyandlife.com',
-    taxNumber: 'GSTIN: 29AABCP8841M1Z1',
     currencySymbol: '₹',
     currencyCode: 'INR',
     logoText: 'PBL CLINICAL'
@@ -62,7 +48,7 @@ export const INITIAL_USERS: User[] = [
   {
     id: 'usr-3',
     name: 'Vikram Mehta',
-    email: 'admin.mumbai@perfectbodyandlife.com',
+    email: 'admin@perfectbodyandlife.com',
     mobile: '+91 98201 33445',
     role: 'clinic_admin',
     roleTitle: 'Clinic Operations Manager',
@@ -76,7 +62,7 @@ export const INITIAL_USERS: User[] = [
     mobile: '+91 98450 11990',
     role: 'doctor',
     roleTitle: 'Senior Diabetologist & Metabolic Consultant',
-    clinicId: 'clinic-2',
+    clinicId: 'clinic-1',
     specialization: 'Diabetes Reversal & Lipidology',
     licenseNumber: 'KMC-REG-62118/KAR',
     avatarUrl: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=256'
@@ -901,5 +887,73 @@ export const INITIAL_ACTIVITIES: ClinicActivity[] = [
     patientId: 'pat-3',
     patientName: 'Suresh Singhania',
     user: 'Pooja Sharma'
+  }
+];
+
+export const INITIAL_PATIENT_INVITES: PatientCodeInvite[] = [
+  {
+    code: 'PBL-DR-ASHMITA',
+    issuedByDieticianId: 'usr-1',
+    dieticianName: 'Dr. Ashmita Joshi, MD, RD',
+    dieticianTitle: 'Chief Clinical Dietitian',
+    clinicId: 'clinic-1',
+    status: 'valid',
+    createdAt: '2026-08-01',
+    expiresAt: '2026-12-31',
+    preAssignedPlanId: 'plan-2',
+    preAssignedPlanName: '3-Month Intensive Weight & Fat Loss'
+  },
+  {
+    code: 'PBL-CARE-2026',
+    issuedByDieticianId: 'usr-2',
+    dieticianName: 'Pooja Sharma, MSc RD',
+    dieticianTitle: 'Senior Clinical Nutritionist',
+    clinicId: 'clinic-1',
+    status: 'valid',
+    createdAt: '2026-08-10',
+    expiresAt: '2026-12-31',
+    preAssignedPlanId: 'plan-1',
+    preAssignedPlanName: '1-Month Metabolic Kickstart'
+  },
+  {
+    code: 'PBL-1008',
+    issuedByDieticianId: 'usr-1',
+    dieticianName: 'Dr. Ashmita Joshi, MD, RD',
+    dieticianTitle: 'Chief Clinical Dietitian',
+    clinicId: 'clinic-1',
+    status: 'valid',
+    createdAt: '2026-08-20',
+    expiresAt: '2026-12-31'
+  },
+  {
+    code: 'PBL-1009',
+    issuedByDieticianId: 'usr-4',
+    dieticianName: 'Dr. Rajesh Nair, MBBS, Diab',
+    dieticianTitle: 'Senior Diabetologist',
+    clinicId: 'clinic-1',
+    status: 'valid',
+    createdAt: '2026-08-22',
+    expiresAt: '2026-12-31'
+  },
+  {
+    code: 'PBL-EXPIRED-99',
+    issuedByDieticianId: 'usr-1',
+    dieticianName: 'Dr. Ashmita Joshi, MD, RD',
+    dieticianTitle: 'Chief Clinical Dietitian',
+    clinicId: 'clinic-1',
+    status: 'expired',
+    createdAt: '2026-01-01',
+    expiresAt: '2026-02-01'
+  },
+  {
+    code: 'PBL-1001',
+    issuedByDieticianId: 'usr-1',
+    dieticianName: 'Dr. Ashmita Joshi, MD, RD',
+    dieticianTitle: 'Chief Clinical Dietitian',
+    clinicId: 'clinic-1',
+    status: 'used',
+    usedByPatientId: 'pat-1',
+    createdAt: '2026-06-15',
+    expiresAt: '2026-09-15'
   }
 ];

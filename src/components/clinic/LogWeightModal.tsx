@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useClinic } from '../../context/ClinicContext';
 import { calculateBmi } from '../../utils/nutritionCalculators';
+import { PatientSelector } from './PatientSelector';
 import { 
   X, 
   Scale, 
@@ -76,7 +77,7 @@ export const LogWeightModal: React.FC = () => {
             <div>
               <h2 className="text-base font-bold">Log Clinical Weigh-In</h2>
               <p className="text-xs text-slate-300">
-                Track body composition & update patient dossier
+                Track body composition & update patient record
               </p>
             </div>
           </div>
@@ -92,22 +93,12 @@ export const LogWeightModal: React.FC = () => {
         <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
           
           {/* Patient Selector */}
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">
-              Select Patient *
-            </label>
-            <select
-              value={patientId}
-              onChange={(e) => setPatientId(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[#183153] font-bold focus:ring-2 focus:ring-[#6BBF59]/30 outline-none"
-            >
-              {(patients || []).map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.patientCode})
-                </option>
-              ))}
-            </select>
-          </div>
+          <PatientSelector
+            variant="form"
+            label="Select Patient *"
+            selectedPatientId={patientId}
+            onSelect={(p) => setPatientId(p.id)}
+          />
 
           {/* Weight & Live BMI Indicator */}
           <div className="p-4 rounded-xl bg-[#F8FFF8] border border-[#E4E9E4] space-y-3">

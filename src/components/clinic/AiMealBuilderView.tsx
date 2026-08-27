@@ -38,6 +38,7 @@ import {
   DayMealPlan 
 } from '../../types/clinic';
 import { regenerateSingleMealSlot, generateClinicalMealPlan } from '../../services/aiMealService';
+import { PatientSelector } from './PatientSelector';
 import { RECIPE_CATALOG } from '../../data/mockMealAndAssessmentData';
 
 const SLOT_META: Record<MealSlotType, { label: string; defaultTime: string; icon: string; bg: string }> = {
@@ -336,21 +337,7 @@ export const AiMealBuilderView: React.FC = () => {
           {/* Action CTAs & Patient Switcher */}
           <div className="flex items-center flex-wrap gap-2.5">
             {/* Patient Selector */}
-            <div className="flex items-center gap-2 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-xs">
-              <User className="w-4 h-4 text-teal-600 shrink-0" />
-              <div className="flex flex-col">
-                <span className="text-[9px] uppercase font-bold text-slate-400 leading-none">Select Patient</span>
-                <select
-                  value={patient.id}
-                  onChange={(e) => handlePatientSelect(e.target.value)}
-                  className="bg-transparent text-xs sm:text-sm font-bold text-slate-800 focus:outline-none cursor-pointer pr-1"
-                >
-                  {(patients || []).map(p => (
-                    <option key={p.id} value={p.id}>{p.name} ({p.patientCode})</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            <PatientSelector onSelect={(p) => handlePatientSelect(p.id)} />
 
             <button
               onClick={() => navigateTo('patient_portal', { patientId: patient.id })}

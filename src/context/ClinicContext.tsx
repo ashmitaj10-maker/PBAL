@@ -30,7 +30,9 @@ import {
   NutrientGapAnalysis,
   GoalDistributionStat,
   WeightUpdateDueItem,
-  ExpiringPlanItem
+  ExpiringPlanItem,
+  PatientCodeInvite,
+  PatientSignUpInput
 } from '../types/clinic';
 import { 
   INITIAL_CLINICS, 
@@ -40,7 +42,8 @@ import {
   INITIAL_WEIGHT_HISTORY, 
   INITIAL_PAYMENTS, 
   INITIAL_INVOICES, 
-  INITIAL_ACTIVITIES 
+  INITIAL_ACTIVITIES,
+  INITIAL_PATIENT_INVITES
 } from '../data/mockClinicData';
 import { 
   INITIAL_ASSESSMENTS, 
@@ -160,6 +163,16 @@ interface ClinicContextType {
   logout: () => void;
   switchClinic: (clinicId: string) => void;
   switchUserRole: (role: UserRole) => void;
+
+  // Patient Self Sign-Up & Code Validation
+  patientInvites: PatientCodeInvite[];
+  validatePatientCode: (code: string) => { valid: boolean; error?: string; invite?: PatientCodeInvite; dietician?: User };
+  registerPatientWithCode: (input: PatientSignUpInput) => Promise<{ success: boolean; error?: string; patient?: Patient }>;
+  issuePatientInviteCode: (dieticianId: string, options?: { patientName?: string; planId?: string }) => PatientCodeInvite;
+  loginPatient: (identifier: string, password?: string) => Promise<{ success: boolean; error?: string; patient?: Patient }>;
+  isPatientSession: boolean;
+  loggedInPatient: Patient | null;
+  switchToDoctorMode: () => void;
 
   // Selected Entities
   selectedPatientId: string | null;
@@ -313,8 +326,8 @@ const ClinicContext = createContext<ClinicContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
   AUTH: 'pbl_clinic_auth_v2',
-  CLINICS: 'pbl_clinics_v2',
-  USERS: 'pbl_clinic_users_v2',
+  CLINICS: 'pbl_clinics_v3',
+  USERS: 'pbl_clinic_users_v3',
   PATIENTS: 'pbl_clinic_patients_v2',
   WEIGHT: 'pbl_clinic_weight_v2',
   PLANS: 'pbl_clinic_plans_v2',
@@ -328,19 +341,42 @@ const STORAGE_KEYS = {
   MEASUREMENTS: 'pbl_clinic_measurements_v3',
   PHOTOS: 'pbl_clinic_photos_v3',
   REMINDERS: 'pbl_clinic_reminders_v3',
-  CHATS: 'pbl_clinic_chats_v3'
+  CHATS: 'pbl_clinic_chats_v3',
+  INVITES: 'pbl_clinic_patient_invites_v2'
 };
 
 export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // Load initial states or fallback to mock data
   const [clinics] = useState<Clinic[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.CLINICS);
-    return saved ? JSON.parse(saved) : INITIAL_CLINICS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length === 1 && parsed[0].name === 'Perfect Body & Life') {
+          return parsed;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    localStorage.setItem(STORAGE_KEYS.CLINICS, JSON.stringify(INITIAL_CLINICS));
+    return INITIAL_CLINICS;
   });
 
   const [users] = useState<User[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.USERS);
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.every((u: User) => u.clinicId === 'clinic-1')) {
+          return parsed;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(INITIAL_USERS));
+    return INITIAL_USERS;
   });
 
   const [selectedClinicId, setSelectedClinicId] = useState<string>(() => {
@@ -386,9 +422,55 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   });
 
   const [activeScreen, setActiveScreen] = useState<ClinicScreen>('dashboard');
-  const [selectedPatientId, setSelectedPatientId] = useState<string | null>('pat-1');
+  const [selectedPatientId, setSelectedPatientIdState] = useState<string | null>(() => {
+    const saved = localStorage.getItem('pbl_selected_patient_id');
+    return saved || 'pat-1';
+  });
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>('inv-101');
   const [selectedMealPlanId, setSelectedMealPlanId] = useState<string | null>('plan-cl-101');
+
+  const [patientInvites, setPatientInvites] = useState<PatientCodeInvite[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.INVITES);
+    return saved ? JSON.parse(saved) : INITIAL_PATIENT_INVITES;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.INVITES, JSON.stringify(patientInvites));
+  }, [patientInvites]);
+
+  const [isPatientSession, setIsPatientSession] = useState<boolean>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.AUTH);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return !!parsed?.isPatient;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return false;
+  });
+
+  const [loggedInPatient, setLoggedInPatient] = useState<Patient | null>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.AUTH);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.isPatient && parsed?.patientId) {
+          return INITIAL_PATIENTS.find(p => p.id === parsed.patientId) || null;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return null;
+  });
+
+  useEffect(() => {
+    if (selectedPatientId) {
+      localStorage.setItem('pbl_selected_patient_id', selectedPatientId);
+    }
+  }, [selectedPatientId]);
 
   // Modals
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
@@ -564,21 +646,65 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const currentClinic = clinics.find(c => c.id === selectedClinicId) || clinics[0];
 
-  // Scoped collections
-  const patients = allPatients.filter(p => p.clinicId === currentClinic.id);
+  // RBAC SCOPED COLLECTIONS:
+  // Patients are strictly locked to their own single record in patient session mode.
+  const patients = isPatientSession
+    ? (loggedInPatient ? [loggedInPatient] : (allPatients.filter(p => p.id === selectedPatientId)))
+    : allPatients.filter(p => p.clinicId === currentClinic.id);
+
   const weightRecords = allWeightRecords;
   const plans = allPlans.filter(p => p.clinicId === currentClinic.id || p.clinicId === 'clinic-1');
-  const payments = allPayments.filter(p => p.clinicId === currentClinic.id);
-  const invoices = allInvoices.filter(i => i.clinicId === currentClinic.id);
-  const activities = allActivities.filter(a => a.clinicId === currentClinic.id);
+  const payments = isPatientSession
+    ? allPayments.filter(p => p.patientId === (loggedInPatient?.id || selectedPatientId))
+    : allPayments.filter(p => p.clinicId === currentClinic.id);
+  const invoices = isPatientSession
+    ? allInvoices.filter(i => i.patientId === (loggedInPatient?.id || selectedPatientId))
+    : allInvoices.filter(i => i.clinicId === currentClinic.id);
+  const activities = isPatientSession
+    ? allActivities.filter(a => a.patientId === (loggedInPatient?.id || selectedPatientId))
+    : allActivities.filter(a => a.clinicId === currentClinic.id);
   const assessments = allAssessments;
   const clinicalMealPlans = allClinicalMealPlans.filter(p => p.clinicId === currentClinic.id);
   const exercisePlans = allExercisePlans.filter(p => p.clinicId === currentClinic.id);
 
-  const selectedPatient = allPatients.find(p => p.id === selectedPatientId) || null;
+  // RBAC: Patient cannot switch to any other patient ID
+  const selectedPatient = isPatientSession
+    ? (loggedInPatient || allPatients.find(p => p.id === selectedPatientId) || patients[0] || null)
+    : (allPatients.find(p => p.id === selectedPatientId) || patients[0] || null);
+
   const selectedInvoice = allInvoices.find(i => i.id === selectedInvoiceId) || null;
 
+  // RBAC ALLOWED SCREENS FOR PATIENTS
+  const PATIENT_PERMITTED_SCREENS: ClinicScreen[] = [
+    'patient_portal',
+    'ai_copilot',
+    'patient_chat',
+    'progress_dashboard',
+    'patient_profile'
+  ];
+
+  const setSelectedPatientId = (id: string | null) => {
+    if (isPatientSession) {
+      if (loggedInPatient) {
+        setSelectedPatientIdState(loggedInPatient.id);
+      }
+      return;
+    }
+    setSelectedPatientIdState(id);
+  };
+
   const navigateTo = (screen: ClinicScreen, options?: { patientId?: string; invoiceId?: string; planId?: string }) => {
+    if (isPatientSession) {
+      // RBAC: Force patient ID lock and restrict to patient-facing views
+      if (loggedInPatient) {
+        setSelectedPatientIdState(loggedInPatient.id);
+      }
+      const targetScreen = PATIENT_PERMITTED_SCREENS.includes(screen) ? screen : 'patient_portal';
+      setActiveScreen(targetScreen);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     if (options?.patientId) {
       setSelectedPatientId(options.patientId);
     }
@@ -634,9 +760,287 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const logout = () => {
     setCurrentUser(null);
+    setLoggedInPatient(null);
+    setIsPatientSession(false);
     setAuthToken(null);
     localStorage.removeItem(STORAGE_KEYS.AUTH);
     setActiveScreen('login');
+  };
+
+  const switchToDoctorMode = () => {
+    setIsPatientSession(false);
+    setLoggedInPatient(null);
+    const doctorUser = users.find(u => u.role === 'doctor') || users[0];
+    setCurrentUser(doctorUser);
+    const mockToken = `jwt_token_${Date.now()}_${doctorUser.id}`;
+    setAuthToken(mockToken);
+    localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify({
+      token: mockToken,
+      userId: doctorUser.id,
+      clinicId: currentClinic.id
+    }));
+    setActiveScreen('dashboard');
+  };
+
+  // Patient Code Validation
+  const validatePatientCode = (code: string) => {
+    const cleanCode = (code || '').trim().toUpperCase();
+    if (!cleanCode) {
+      return { valid: false, error: 'Please enter your Patient Code.' };
+    }
+
+    // 1. Check patient invites
+    const invite = patientInvites.find(inv => inv.code.toUpperCase() === cleanCode);
+    if (invite) {
+      if (invite.status === 'expired' || (invite.expiresAt && new Date(invite.expiresAt) < new Date('2026-08-27'))) {
+        return { 
+          valid: false, 
+          error: 'This Patient Code has expired. Please contact your dietician to receive an active code.' 
+        };
+      }
+      if (invite.status === 'used') {
+        return { 
+          valid: false, 
+          error: 'This Patient Code has already been registered. Please sign in with your email or mobile number.' 
+        };
+      }
+      const dietician = users.find(u => u.id === invite.issuedByDieticianId) || users[0];
+      return {
+        valid: true,
+        invite,
+        dietician,
+        clinicId: invite.clinicId
+      };
+    }
+
+    // 2. Check if it's already an active patient code in the clinic roster
+    const existingPat = allPatients.find(p => p.patientCode.toUpperCase() === cleanCode);
+    if (existingPat) {
+      return {
+        valid: false,
+        error: `Patient Code "${cleanCode}" is already in use for ${existingPat.name}. Please sign in to access your portal.`
+      };
+    }
+
+    // 3. Invalid code
+    return {
+      valid: false,
+      error: 'Invalid Patient Code. Please enter the unique code provided by your dietician (e.g. PBL-DR-ASHMITA, PBL-CARE-2026, or PBL-1008).'
+    };
+  };
+
+  // Issue new Patient Invite Code (Dietician Action)
+  const issuePatientInviteCode = (dieticianId: string, options?: { patientName?: string; planId?: string }): PatientCodeInvite => {
+    const dietician = users.find(u => u.id === dieticianId) || currentUser || users[0];
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const newCode = `PBL-${randomSuffix}`;
+    const plan = plans.find(p => p.id === options?.planId);
+
+    const newInvite: PatientCodeInvite = {
+      code: newCode,
+      issuedByDieticianId: dietician.id,
+      dieticianName: dietician.name,
+      dieticianTitle: dietician.roleTitle,
+      clinicId: currentClinic.id,
+      patientName: options?.patientName,
+      preAssignedPlanId: plan?.id,
+      preAssignedPlanName: plan?.name,
+      status: 'valid',
+      createdAt: new Date().toISOString().split('T')[0],
+      expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    };
+
+    setPatientInvites(prev => [newInvite, ...prev]);
+
+    const newAct: ClinicActivity = {
+      id: `act-${Date.now()}`,
+      clinicId: currentClinic.id,
+      type: 'patient_registered',
+      title: 'Patient Code Issued',
+      description: `Issued registration code ${newCode} for new patient onboarding.`,
+      timestamp: 'Just now',
+      user: dietician.name
+    };
+    setAllActivities(prev => [newAct, ...prev]);
+
+    return newInvite;
+  };
+
+  // Patient Self Sign-Up with 3-Piece Info (Email/Phone, Password, Patient Code)
+  const registerPatientWithCode = async (input: PatientSignUpInput): Promise<{ success: boolean; error?: string; patient?: Patient }> => {
+    // 1. Validate Patient Code First
+    const validation = validatePatientCode(input.patientCode);
+    if (!validation.valid || !validation.invite) {
+      return { success: false, error: validation.error || 'Invalid or unverified Patient Code.' };
+    }
+
+    // 2. Validate Email or Phone Number
+    const rawIdentifier = (input.emailOrPhone || '').trim();
+    if (!rawIdentifier) {
+      return { success: false, error: 'Please enter your email address or phone number.' };
+    }
+
+    const isEmail = rawIdentifier.includes('@');
+    const cleanEmail = isEmail ? rawIdentifier.toLowerCase() : '';
+    const cleanMobile = !isEmail ? rawIdentifier : '';
+    const normalizedMobile = rawIdentifier.replace(/\s+/g, '');
+
+    // Check if email or phone is already registered in patients roster
+    const existingPatient = allPatients.find(p => {
+      if (isEmail && p.email && p.email.toLowerCase() === cleanEmail) return true;
+      if (!isEmail && p.mobile && p.mobile.replace(/\s+/g, '') === normalizedMobile) return true;
+      return false;
+    });
+
+    if (existingPatient) {
+      return { 
+        success: false, 
+        error: `This ${isEmail ? 'email address' : 'phone number'} is already registered. Please sign in to your account.` 
+      };
+    }
+
+    // 3. Validate Password
+    if (!input.password || input.password.length < 6) {
+      return { success: false, error: 'Password must be at least 6 characters long.' };
+    }
+    if (input.password !== input.confirmPassword) {
+      return { success: false, error: 'Password and confirm password do not match.' };
+    }
+
+    const dietician = validation.dietician || users[0];
+    const newPatientId = `pat-${Date.now()}`;
+    const assignedPlan = plans.find(p => p.id === validation.invite?.preAssignedPlanId) || plans[0];
+
+    // Determine a clean friendly name without asking the patient personal questions
+    let derivedName = input.name?.trim() || validation.invite?.patientName?.trim() || '';
+    if (!derivedName) {
+      if (isEmail) {
+        const username = cleanEmail.split('@')[0].replace(/[._-]/g, ' ');
+        derivedName = username.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      } else {
+        derivedName = `Patient (${validation.invite.code})`;
+      }
+    }
+
+    const newPatient: Patient = {
+      id: newPatientId,
+      clinicId: currentClinic.id,
+      patientCode: validation.invite.code,
+      name: derivedName,
+      email: isEmail ? cleanEmail : `${rawIdentifier.replace(/[^0-9]/g, '')}@patient.perfectbodyandlife.com`,
+      mobile: !isEmail ? rawIdentifier : '+91 98000 00000',
+      age: 30,
+      gender: 'female',
+      heightCm: 165,
+      currentWeightKg: 68.0,
+      startingWeightKg: 68.0,
+      targetWeightKg: 60.0,
+      primaryGoals: ['Doctor-Supervised Nutrition & Metabolic Health'],
+      medicalConditions: [],
+      foodPreference: 'Vegetarian',
+      allergies: [],
+      assignedDoctorId: dietician.id,
+      assignedPlanId: assignedPlan?.id,
+      assignedPlanName: assignedPlan?.name,
+      status: 'active',
+      joiningDate: new Date().toISOString().split('T')[0],
+      renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      notes: `Registered via Patient Code ${validation.invite.code} issued by ${dietician.name}.`
+    };
+
+    // 1. Add to patients collection
+    setAllPatients(prev => [newPatient, ...prev]);
+
+    // 2. Mark code as used
+    setPatientInvites(prev => prev.map(inv => {
+      if (inv.code.toUpperCase() === validation.invite?.code.toUpperCase()) {
+        return {
+          ...inv,
+          status: 'used',
+          usedByPatientId: newPatient.id,
+          usedAt: new Date().toISOString()
+        };
+      }
+      return inv;
+    }));
+
+    // 3. Log initial baseline weight record
+    const newWeight: WeightRecord = {
+      id: `wt-${Date.now()}`,
+      patientId: newPatient.id,
+      date: new Date().toISOString().split('T')[0],
+      weightKg: newPatient.currentWeightKg,
+      bmi: Number((newPatient.currentWeightKg / Math.pow(newPatient.heightCm / 100, 2)).toFixed(1)),
+      notes: 'Initial registration',
+      loggedBy: dietician.name
+    };
+    setAllWeightRecords(prev => [newWeight, ...prev]);
+
+    // 4. Log clinic activity
+    const newAct: ClinicActivity = {
+      id: `act-${Date.now()}`,
+      clinicId: currentClinic.id,
+      type: 'patient_registered',
+      title: 'Patient Account Created',
+      description: `${newPatient.name} registered with code ${validation.invite.code} (Linked to ${dietician.name}).`,
+      timestamp: 'Just now',
+      patientId: newPatient.id,
+      patientName: newPatient.name,
+      user: dietician.name
+    };
+    setAllActivities(prev => [newAct, ...prev]);
+
+    // 5. Authenticate patient session & navigate to dashboard
+    const mockToken = `jwt_patient_token_${Date.now()}_${newPatient.id}`;
+    setAuthToken(mockToken);
+    setSelectedPatientId(newPatient.id);
+    setIsPatientSession(true);
+    setLoggedInPatient(newPatient);
+
+    localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify({
+      token: mockToken,
+      patientId: newPatient.id,
+      isPatient: true,
+      clinicId: currentClinic.id
+    }));
+
+    setActiveScreen('patient_portal');
+    return { success: true, patient: newPatient };
+  };
+
+  // Patient Login with Email / Code / Mobile
+  const loginPatient = async (identifier: string, _password?: string): Promise<{ success: boolean; error?: string; patient?: Patient }> => {
+    const cleanId = (identifier || '').trim().toLowerCase();
+    const cleanMobile = cleanId.replace(/\s+/g, '');
+    
+    const patient = allPatients.find(p => 
+      p.email.toLowerCase() === cleanId || 
+      p.patientCode.toLowerCase() === cleanId || 
+      p.mobile.replace(/\s+/g, '') === cleanMobile
+    );
+
+    if (!patient) {
+      return { 
+        success: false, 
+        error: 'No patient account found with this email, mobile number, or Patient Code. Please sign up if you have an invite code.' 
+      };
+    }
+
+    const mockToken = `jwt_patient_token_${Date.now()}_${patient.id}`;
+    setAuthToken(mockToken);
+    setSelectedPatientId(patient.id);
+    setIsPatientSession(true);
+    setLoggedInPatient(patient);
+
+    localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify({
+      token: mockToken,
+      patientId: patient.id,
+      isPatient: true,
+      clinicId: patient.clinicId || currentClinic.id
+    }));
+
+    setActiveScreen('patient_portal');
+    return { success: true, patient };
   };
 
   const switchClinic = (clinicId: string) => {
@@ -779,10 +1183,18 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   const updatePatient = (id: string, updates: Partial<Patient>) => {
+    if (isPatientSession) {
+      console.warn('RBAC Violation: Patient accounts are not authorized to update clinical records directly.');
+      return;
+    }
     setAllPatients(prev => prev.map(p => (p.id === id ? { ...p, ...updates } : p)));
   };
 
   const deletePatient = (id: string) => {
+    if (isPatientSession) {
+      console.warn('RBAC Violation: Patient accounts cannot delete records.');
+      return;
+    }
     setAllPatients(prev => prev.filter(p => p.id !== id));
     if (selectedPatientId === id) {
       setSelectedPatientId(allPatients.find(p => p.id !== id)?.id || null);
@@ -1571,6 +1983,15 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         logout,
         switchClinic,
         switchUserRole,
+        // Patient Auth & Invites
+        patientInvites,
+        validatePatientCode,
+        registerPatientWithCode,
+        issuePatientInviteCode,
+        loginPatient,
+        isPatientSession,
+        loggedInPatient,
+        switchToDoctorMode,
         selectedPatientId,
         setSelectedPatientId,
         selectedPatient,

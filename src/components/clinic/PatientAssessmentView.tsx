@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { PatientAssessment, FoodPreference } from '../../types/clinic';
 import { generateClinicalMealPlan } from '../../services/aiMealService';
+import { PatientSelector } from './PatientSelector';
 
 export const PatientAssessmentView: React.FC = () => {
   const { 
@@ -245,7 +246,7 @@ export const PatientAssessmentView: React.FC = () => {
           <button 
             onClick={() => navigateTo('patient_profile', { patientId: patient.id })}
             className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
-            title="Back to Patient Dossier"
+            title="Back to Patient Profile"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
@@ -268,21 +269,7 @@ export const PatientAssessmentView: React.FC = () => {
         {/* Patient Switcher, Version Selector & AI Generator Action */}
         <div className="flex items-center flex-wrap gap-2.5">
           {/* Patient Selector */}
-          <div className="flex items-center gap-2 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-xs">
-            <User className="w-4 h-4 text-teal-600 shrink-0" />
-            <div className="flex flex-col">
-              <span className="text-[9px] uppercase font-bold text-slate-400 leading-none">Select Patient</span>
-              <select
-                value={patient?.id || ''}
-                onChange={(e) => setSelectedPatientId(e.target.value)}
-                className="bg-transparent text-xs sm:text-sm font-bold text-slate-800 focus:outline-none cursor-pointer pr-1"
-              >
-                {(patients || []).map(p => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.patientCode})</option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <PatientSelector />
 
           {/* Version Selector */}
           <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200 text-xs">

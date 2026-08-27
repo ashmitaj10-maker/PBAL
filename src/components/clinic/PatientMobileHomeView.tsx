@@ -24,15 +24,18 @@ import {
   Zap,
   TrendingDown,
   User,
-  MessageSquare
+  MessageSquare,
+  Stethoscope
 } from 'lucide-react';
 import { calculateBmi } from '../../utils/nutritionCalculators';
+import { PatientSelector } from './PatientSelector';
 
 export const PatientMobileHomeView: React.FC = () => {
   const { 
     selectedPatient, 
     setSelectedPatientId,
     patients, 
+    users,
     navigateTo, 
     getActiveMealPlan, 
     getPatientExercisePlan, 
@@ -40,10 +43,14 @@ export const PatientMobileHomeView: React.FC = () => {
     openRecipeModal,
     updatePatientDailyLog,
     getPatientDailyLog,
-    currentClinic
+    currentClinic,
+    isPatientSession,
+    switchToDoctorMode,
+    logout
   } = useClinic();
 
   const patient = selectedPatient || patients[0];
+  const assignedDietician = (users || []).find(u => u.id === patient?.assignedDoctorId) || users[0];
   const mealPlan = patient ? getActiveMealPlan(patient.id) : null;
   const exercisePlan = patient ? getPatientExercisePlan(patient.id) : null;
   const weightHistory = patient ? getPatientWeightHistory(patient.id) : [];
@@ -117,71 +124,58 @@ export const PatientMobileHomeView: React.FC = () => {
     <div className="space-y-6 pb-20 max-w-5xl mx-auto">
       
       {/* Top Navigation & View Toggle */}
-      <div className="bg-white p-4 rounded-2xl border border-[#E4E9E4] shadow-xs flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => navigateTo('patient_profile', { patientId: patient.id })}
-            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 cursor-pointer"
-            title="Back to Clinical Dossier"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
+      {!isPatientSession && (
+        <div className="bg-white p-4 rounded-2xl border border-[#E4E9E4] shadow-xs flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => navigateTo('patients')}
+              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 cursor-pointer"
+              title="Back to Directory"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
 
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-[#183153]">
-                Patient Mobile Portal View
-              </h1>
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#6BBF59]/15 text-[#5EAB4D]">
-                Live Sync
-              </span>
-            </div>
-            <p className="text-xs text-slate-500">
-              Viewing as patient: <strong className="text-[#183153]">{patient.name}</strong> ({patient.foodPreference})
-            </p>
-          </div>
-        </div>
-
-        {/* Action Controls & Patient Selector */}
-        <div className="flex items-center flex-wrap gap-2.5">
-          {/* Patient Selector */}
-          <div className="flex items-center gap-2 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-xs">
-            <User className="w-4 h-4 text-teal-600 shrink-0" />
-            <div className="flex flex-col">
-              <span className="text-[9px] uppercase font-bold text-slate-400 leading-none">Select Patient</span>
-              <select
-                value={patient.id}
-                onChange={(e) => setSelectedPatientId(e.target.value)}
-                className="bg-transparent text-xs sm:text-sm font-bold text-slate-800 focus:outline-none cursor-pointer pr-1"
-              >
-                {patients.map(p => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.patientCode})</option>
-                ))}
-              </select>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold text-[#183153]">
+                  Patient Portal (Doctor Preview)
+                </h1>
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#6BBF59]/15 text-[#5EAB4D]">
+                  Doctor View
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">
+                Viewing as patient: <strong className="text-[#183153]">{patient.name}</strong> • Code: <strong className="font-mono text-teal-700">{patient.patientCode}</strong>
+              </p>
             </div>
           </div>
 
-          <button
-            onClick={() => setDeviceFrameMode(!deviceFrameMode)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-              deviceFrameMode 
-                ? 'bg-[#183153] text-white border-[#183153]' 
-                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-            }`}
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>{deviceFrameMode ? 'Mobile Viewport' : 'Expanded View'}</span>
-          </button>
+          {/* Action Controls & Patient Selector */}
+          <div className="flex items-center flex-wrap gap-2.5">
+            <PatientSelector />
 
-          <button
-            onClick={handleDownloadPdf}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#6BBF59] hover:bg-[#5EAB4D] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Download Plan PDF</span>
-          </button>
+            <button
+              onClick={() => setDeviceFrameMode(!deviceFrameMode)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                deviceFrameMode 
+                  ? 'bg-[#183153] text-white border-[#183153]' 
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>{deviceFrameMode ? 'Mobile Viewport' : 'Expanded View'}</span>
+            </button>
+
+            <button
+              onClick={handleDownloadPdf}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#6BBF59] hover:bg-[#5EAB4D] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download Plan PDF</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Patient Mobile Portal Container */}
       <div className={`transition-all duration-300 ${deviceFrameMode ? 'max-w-md mx-auto bg-slate-900 p-4 rounded-[40px] shadow-2xl border-4 border-slate-800' : 'w-full'}`}>
@@ -243,7 +237,7 @@ export const PatientMobileHomeView: React.FC = () => {
             {/* Quick In-App Chat Banner with Doctor */}
             <div 
               onClick={() => navigateTo('patient_chat', { patientId: patient.id })}
-              className="bg-gradient-to-r from-teal-50 to-emerald-50 p-4 rounded-2xl border border-teal-200/80 shadow-xs flex items-center justify-between cursor-pointer hover:border-teal-400 transition-all group"
+              className="bg-gradient-to-r from-teal-50 via-emerald-50 to-teal-50 p-4 rounded-2xl border border-teal-200/80 shadow-xs flex items-center justify-between cursor-pointer hover:border-teal-400 transition-all group"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
@@ -251,10 +245,14 @@ export const PatientMobileHomeView: React.FC = () => {
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <h4 className="text-xs font-bold text-[#183153]">In-App Chat with Dr. Ashmita</h4>
+                    <h4 className="text-xs font-bold text-[#183153]">
+                      Direct Chat with {assignedDietician?.name || 'Your Dietitian'}
+                    </h4>
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   </div>
-                  <p className="text-[11px] text-slate-500">Send meal photos, weight updates & questions</p>
+                  <p className="text-[11px] text-slate-500">
+                    {assignedDietician?.roleTitle || 'Clinical Dietitian'} • {assignedDietician?.specialization || 'Metabolic & Weight Management'}
+                  </p>
                 </div>
               </div>
 

@@ -23,8 +23,10 @@ import {
   Trash2,
   Edit,
   MessageSquare,
-  Bot
+  Bot,
+  KeyRound
 } from 'lucide-react';
+import { IssuePatientCodeModal } from './IssuePatientCodeModal';
 
 export const PatientListView: React.FC = () => {
   const { 
@@ -38,6 +40,7 @@ export const PatientListView: React.FC = () => {
   } = useClinic();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [isIssueCodeModalOpen, setIsIssueCodeModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [foodFilter, setFoodFilter] = useState<string>('all');
   const [conditionFilter, setConditionFilter] = useState<string>('all');
@@ -141,7 +144,7 @@ export const PatientListView: React.FC = () => {
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Search, filter, calculate auto BMI, and manage clinical nutrition dossiers.
+            Search, filter, calculate auto BMI, and manage clinical nutrition profiles.
           </p>
         </div>
 
@@ -152,6 +155,14 @@ export const PatientListView: React.FC = () => {
           >
             <Download className="w-3.5 h-3.5 text-slate-500" />
             <span>Export CSV</span>
+          </button>
+
+          <button
+            onClick={() => setIsIssueCodeModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+          >
+            <KeyRound className="w-3.5 h-3.5 text-teal-200" />
+            <span>Issue Patient Code</span>
           </button>
 
           <button
@@ -441,6 +452,12 @@ export const PatientListView: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Issue Patient Registration Code Modal */}
+      <IssuePatientCodeModal 
+        isOpen={isIssueCodeModalOpen} 
+        onClose={() => setIsIssueCodeModalOpen(false)} 
+      />
 
     </div>
   );

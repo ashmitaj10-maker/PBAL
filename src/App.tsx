@@ -32,9 +32,10 @@ import { LogMeasurementsModal } from './components/clinic/LogMeasurementsModal';
 import { UploadPhotoModal } from './components/clinic/UploadPhotoModal';
 import { CreatePlanModal } from './components/clinic/CreatePlanModal';
 import { ToastNotificationSimulator } from './components/clinic/ToastNotificationSimulator';
+import { PatientAppLayout } from './components/clinic/PatientAppLayout';
 
 const ClinicAppContent: React.FC = () => {
-  const { isAuthenticated, activeScreen } = useClinic();
+  const { isAuthenticated, activeScreen, isPatientSession } = useClinic();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -43,6 +44,22 @@ const ClinicAppContent: React.FC = () => {
     return <LoginScreen />;
   }
 
+  // =========================================================================
+  // DEDICATED SEPARATE PATIENT APP EXPERIENCE (Zero Doctor Tool Access)
+  // =========================================================================
+  if (isPatientSession) {
+    return (
+      <>
+        <PatientAppLayout />
+        <RecipeDetailModal />
+        <ToastNotificationSimulator />
+      </>
+    );
+  }
+
+  // =========================================================================
+  // DEDICATED CLINICAL PRACTICE DOCTOR EXPERIENCE (Full Practice Management)
+  // =========================================================================
   return (
     <div className="min-h-screen bg-slate-50/60 text-slate-900 flex selection:bg-teal-500/20 selection:text-teal-900">
       {/* Left Sidebar Navigation */}
