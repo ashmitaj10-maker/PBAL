@@ -16,6 +16,7 @@ import {
   PatientAssessment,
   ClinicalMealPlan,
   ExercisePlan,
+  ExerciseItem,
   RecipeDetail,
   MealOption,
   PatientDailyLog,
@@ -232,6 +233,10 @@ interface ClinicContextType {
   saveExercisePlan: (plan: ExercisePlan) => void;
   publishExercisePlan: (planId: string) => void;
   getPatientExercisePlan: (patientId: string) => ExercisePlan | null;
+  addExerciseToPatientPlan: (patientId: string, exerciseData: Omit<ExerciseItem, 'id'>) => ExerciseItem;
+  updateExerciseInPatientPlan: (patientId: string, exerciseId: string, updates: Partial<ExerciseItem>) => void;
+  removeExerciseFromPatientPlan: (patientId: string, exerciseId: string) => void;
+  getPatientAssignedExercises: (patientId: string) => ExerciseItem[];
 
   // Phase 2: Recipe Modal & Details
   selectedRecipe: RecipeDetail | null;
@@ -1560,10 +1565,149 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       }
       return p;
     }));
+
+    const targetPlan = allExercisePlans.find(p => p.id === planId);
+    if (targetPlan) {
+      const act: ClinicActivity = {
+        id: `act-${Date.now()}`,
+        clinicId: currentClinic.id,
+        type: 'plan_renewed',
+        title: 'Exercise Protocol Published',
+        description: `Prescribed exercise routine published live for patient.`,
+        timestamp: 'Just now',
+        patientId: targetPlan.patientId,
+        patientName: targetPlan.patientName || 'Patient',
+        user: currentUser?.name || 'Doctor'
+      };
+      setAllActivities(prev => [act, ...prev]);
+    }
   };
 
   const getPatientExercisePlan = (patientId: string): ExercisePlan | null => {
-    return allExercisePlans.find(p => p.patientId === patientId) || INITIAL_EXERCISE_PLANS[0] || null;
+    const existing = allExercisePlans.find(p => p.patientId === patientId);
+    if (existing) return existing;
+    if (patientId === 'pat-1' && INITIAL_EXERCISE_PLANS[0]) {
+      return INITIAL_EXERCISE_PLANS[0];
+    }
+    return null;
+  };
+
+  const addExerciseToPatientPlan = (patientId: string, exerciseData: Omit<ExerciseItem, 'id'>): ExerciseItem => {
+    const targetPatient = allPatients.find(p => p.id === patientId) || selectedPatient;
+    const newExercise: ExerciseItem = {
+      ...exerciseData,
+      id: `ex-assigned-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`
+    };
+
+    setAllExercisePlans(prev => {
+      const existingPlan = prev.find(p => p.patientId === patientId);
+      if (existingPlan) {
+        const currentAssigned = existingPlan.assignedExercises || [];
+        const updatedPlan: ExercisePlan = {
+          ...existingPlan,
+          assignedExercises: [...currentAssigned, newExercise],
+          status: 'published'
+        };
+        return prev.map(p => p.id === existingPlan.id ? updatedPlan : p);
+      } else {
+        const newPlan: ExercisePlan = {
+          id: `explan-${Date.now()}`,
+          patientId,
+          patientName: targetPatient?.name || 'Patient',
+          clinicId: currentClinic.id,
+          title: 'Prescribed Metabolic Exercise & Form Guide',
+          status: 'published',
+          weeklyGoalDays: 4,
+          dailyStepTarget: 8500,
+          assignedExercises: [newExercise],
+          routines: [],
+          doctorNotes: 'Follow the assigned movement sequence with strict posture adherence and prescribed rest intervals.',
+          createdAt: new Date().toISOString(),
+          publishedAt: new Date().toISOString()
+        };
+        return [newPlan, ...prev];
+      }
+    });
+
+    // Record activity
+    const act: ClinicActivity = {
+      id: `act-${Date.now()}`,
+      clinicId: currentClinic.id,
+      type: 'plan_renewed',
+      title: 'Exercise Prescribed',
+      description: `Assigned "${newExercise.name}" (${newExercise.sets || 3} sets × ${newExercise.reps || '12 reps'}) to ${targetPatient?.name || 'patient'}.`,
+      timestamp: 'Just now',
+      patientId,
+      patientName: targetPatient?.name || 'Patient',
+      user: currentUser?.name || 'Dr. Ashmita Joshi'
+    };
+    setAllActivities(prev => [act, ...prev]);
+
+    return newExercise;
+  };
+
+  const updateExerciseInPatientPlan = (patientId: string, exerciseId: string, updates: Partial<ExerciseItem>) => {
+    setAllExercisePlans(prev => {
+      return prev.map(plan => {
+        if (plan.patientId !== patientId) return plan;
+        const currentAssigned = plan.assignedExercises || [];
+        const updatedAssigned = currentAssigned.map(ex => {
+          if (ex.id === exerciseId) {
+            return { ...ex, ...updates };
+          }
+          return ex;
+        });
+
+        const updatedRoutines = (plan.routines || []).map(r => ({
+          ...r,
+          exercises: (r.exercises || []).map(ex => ex.id === exerciseId ? { ...ex, ...updates } : ex)
+        }));
+
+        return {
+          ...plan,
+          assignedExercises: updatedAssigned,
+          routines: updatedRoutines
+        };
+      });
+    });
+  };
+
+  const removeExerciseFromPatientPlan = (patientId: string, exerciseId: string) => {
+    setAllExercisePlans(prev => {
+      return prev.map(plan => {
+        if (plan.patientId !== patientId) return plan;
+        const currentAssigned = plan.assignedExercises || [];
+        const updatedAssigned = currentAssigned.filter(ex => ex.id !== exerciseId);
+        const updatedRoutines = (plan.routines || []).map(r => ({
+          ...r,
+          exercises: (r.exercises || []).filter(ex => ex.id !== exerciseId)
+        }));
+
+        return {
+          ...plan,
+          assignedExercises: updatedAssigned,
+          routines: updatedRoutines
+        };
+      });
+    });
+  };
+
+  const getPatientAssignedExercises = (patientId: string): ExerciseItem[] => {
+    const plan = allExercisePlans.find(p => p.patientId === patientId);
+    if (plan && plan.assignedExercises && plan.assignedExercises.length > 0) {
+      return plan.assignedExercises;
+    }
+    if (plan && plan.routines && plan.routines.length > 0) {
+      const routineExercises = plan.routines.flatMap(r => r.exercises || []);
+      if (routineExercises.length > 0) {
+        return routineExercises;
+      }
+    }
+    // For demo starter patient pat-1, return the initial published exercise list
+    if (patientId === 'pat-1' && INITIAL_EXERCISE_PLANS[0]) {
+      return INITIAL_EXERCISE_PLANS[0].routines.flatMap(r => r.exercises || []);
+    }
+    return [];
   };
 
   // Phase 2: Recipe Modal
@@ -2036,6 +2180,10 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         saveExercisePlan,
         publishExercisePlan,
         getPatientExercisePlan,
+        addExerciseToPatientPlan,
+        updateExerciseInPatientPlan,
+        removeExerciseFromPatientPlan,
+        getPatientAssignedExercises,
         selectedRecipe,
         isRecipeModalOpen,
         openRecipeModal,

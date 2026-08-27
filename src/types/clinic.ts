@@ -347,13 +347,24 @@ export interface ClinicalMealPlan {
 export interface ExerciseItem {
   id: string;
   name: string;
-  category: 'Cardio' | 'Strength' | 'Mobility & Yoga' | 'Core & Posture' | 'Rehab / Low-Impact';
+  category: 'Cardio' | 'Strength' | 'Mobility & Yoga' | 'Core & Posture' | 'Rehab / Low-Impact' | string;
+  guideId?: string;
+  compositeImageUrl?: string;
   durationMinutes?: number;
   sets?: number;
   reps?: string;
-  intensity: 'Low' | 'Moderate' | 'High';
+  restSeconds?: string;
+  intensity: 'Low' | 'Moderate' | 'High' | string;
   targetHeartRateZone?: string;
-  timeOfDay: 'Morning' | 'Post-Meal' | 'Evening' | 'Anytime';
+  timeOfDay: 'Morning' | 'Post-Meal' | 'Evening' | 'Anytime' | string;
+  frequencyDays?: string[];
+  difficulty?: 'Beginner' | 'Moderate' | 'Advanced' | string;
+  doctorNotes?: string;
+  purpose?: string;
+  targetMuscles?: string[];
+  primaryMover?: string;
+  secondaryStabilizers?: string[];
+  tempoGuidance?: string;
   instructions: string[];
   precautions?: string;
   completed?: boolean;
@@ -371,11 +382,13 @@ export interface DailyWorkout {
 export interface ExercisePlan {
   id: string;
   patientId: string;
+  patientName?: string;
   clinicId: string;
   title: string;
   status: 'draft' | 'published';
   weeklyGoalDays: number;
   dailyStepTarget: number;
+  assignedExercises?: ExerciseItem[];
   routines: DailyWorkout[];
   doctorNotes: string;
   createdAt: string;

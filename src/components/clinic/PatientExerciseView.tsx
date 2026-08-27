@@ -26,7 +26,8 @@ import {
   Target,
   Wind,
   Camera,
-  Maximize2
+  Maximize2,
+  Stethoscope
 } from 'lucide-react';
 import { ExerciseDetailItem, ExercisePhotoPose, EXERCISE_GUIDE_CATALOG } from '../../data/exerciseGuideData';
 
@@ -39,6 +40,7 @@ export const PatientExerciseView: React.FC = () => {
     getPatientExercisePlan, 
     getPatientDailyLog, 
     updatePatientDailyLog, 
+    getPatientAssignedExercises,
     loggedInPatient,
     isPatientSession,
     navigateTo 
@@ -46,6 +48,8 @@ export const PatientExerciseView: React.FC = () => {
 
   const patient = isPatientSession ? (loggedInPatient || selectedPatient || patients[0]) : (selectedPatient || patients[0]);
   const exercisePlan = patient ? getPatientExercisePlan(patient.id) : null;
+  const assignedItems = patient ? getPatientAssignedExercises(patient.id) : [];
+
   const dailyLog = patient ? getPatientDailyLog(patient.id) : {
     date: new Date().toISOString().split('T')[0],
     waterGlassesDrank: 6,
@@ -64,9 +68,44 @@ export const PatientExerciseView: React.FC = () => {
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
   const [timerInitial, setTimerInitial] = useState<number>(45);
 
-  // Filter exercises
+  // Combine doctor-assigned exercises with catalog rich guides
+  const displayExercises: ExerciseDetailItem[] = useMemo(() => {
+    if (assignedItems.length > 0) {
+      return assignedItems.map(assigned => {
+        const catalogMatch = EXERCISE_GUIDE_CATALOG.find(
+          c => c.name.toLowerCase() === assigned.name.toLowerCase() || c.id === assigned.guideId
+        ) || EXERCISE_GUIDE_CATALOG[0];
+
+        return {
+          ...catalogMatch,
+          id: assigned.id,
+          name: assigned.name,
+          category: (assigned.category || catalogMatch.category) as any,
+          purpose: assigned.purpose || catalogMatch.purpose,
+          targetMuscles: assigned.targetMuscles || catalogMatch.targetMuscles,
+          primaryMover: assigned.primaryMover || catalogMatch.primaryMover,
+          compositeImageUrl: assigned.compositeImageUrl || catalogMatch.compositeImageUrl,
+          recommendedDose: {
+            sets: assigned.sets || catalogMatch.recommendedDose.sets,
+            repsOrDuration: assigned.reps || catalogMatch.recommendedDose.repsOrDuration,
+            restBetweenSets: assigned.restSeconds || catalogMatch.recommendedDose.restBetweenSets
+          },
+          safetyTips: assigned.doctorNotes 
+            ? [`Doctor's Note: ${assigned.doctorNotes}`, ...catalogMatch.safetyTips]
+            : catalogMatch.safetyTips,
+          modifications: assigned.frequencyDays?.length 
+            ? `Assigned Days: ${assigned.frequencyDays.join(', ')} • Intensity: ${assigned.intensity || 'Moderate'}`
+            : catalogMatch.modifications
+        };
+      });
+    }
+    // Fallback to core exercise library
+    return EXERCISE_GUIDE_CATALOG;
+  }, [assignedItems]);
+
+  // Filter exercises by category and search
   const filteredExercises = useMemo(() => {
-    return (EXERCISE_GUIDE_CATALOG || []).filter(ex => {
+    return (displayExercises || []).filter(ex => {
       if (selectedCategory !== 'All' && ex.category !== selectedCategory) {
         return false;
       }
@@ -81,7 +120,7 @@ export const PatientExerciseView: React.FC = () => {
       }
       return true;
     });
-  }, [selectedCategory, searchQuery]);
+  }, [displayExercises, selectedCategory, searchQuery]);
 
   const handleToggleCompleted = (exerciseId: string) => {
     if (!patient) return;
@@ -131,32 +170,32 @@ export const PatientExerciseView: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2 max-w-2xl">
             <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-300">
-              <Zap className="w-4 h-4 text-emerald-400" />
-              Purpose-Built Exercise Visual Sequences
+              <Stethoscope className="w-4 h-4 text-emerald-400" />
+              Doctor Prescribed Movement & Form Guide
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Guided Exercise & Form Reference
+              My Prescribed Exercise Plan
             </h1>
             <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
-              Every exercise features a continuous 4-pose demonstration visual showing the exact starting posture, descent path, lowest position, and return to standing.
+              Tailored movements prescribed by your clinical dietitian with 4-pose demonstration visuals showing the exact starting posture, descent path, lowest position, and return to standing.
             </p>
           </div>
 
           {/* Quick Stats Pill */}
           <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/20 shrink-0">
             <div className="text-center px-2">
-              <span className="text-[10px] uppercase font-bold text-slate-300 block">Weekly Target</span>
-              <span className="text-base font-black text-white">{exercisePlan?.weeklyGoalDays || 4} Days/Wk</span>
+              <span className="text-[10px] uppercase font-bold text-slate-300 block">Assigned Exercises</span>
+              <span className="text-base font-black text-white">{displayExercises.length} Movements</span>
             </div>
             <div className="w-px h-8 bg-white/20" />
             <div className="text-center px-2">
-              <span className="text-[10px] uppercase font-bold text-slate-300 block">Daily Steps</span>
-              <span className="text-base font-black text-emerald-300">{exercisePlan?.dailyStepTarget || 8500}</span>
+              <span className="text-[10px] uppercase font-bold text-slate-300 block">Weekly Target</span>
+              <span className="text-base font-black text-emerald-300">{exercisePlan?.weeklyGoalDays || 4} Days/Wk</span>
             </div>
             <div className="w-px h-8 bg-white/20" />
             <div className="text-center px-2">
               <span className="text-[10px] uppercase font-bold text-slate-300 block">Completed Today</span>
-              <span className="text-base font-black text-amber-300">{completedCount} Completed</span>
+              <span className="text-base font-black text-amber-300">{completedCount} Done</span>
             </div>
           </div>
         </div>
@@ -181,7 +220,7 @@ export const PatientExerciseView: React.FC = () => {
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
             <input
               type="text"
-              placeholder="Search by exercise name, target muscle (e.g. quads, glutes, hamstrings, core)..."
+              placeholder="Search your assigned exercises (e.g. squats, glutes, core, hamstrings)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full text-xs sm:text-sm pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-teal-500 font-medium text-slate-900 transition-all"
@@ -189,7 +228,7 @@ export const PatientExerciseView: React.FC = () => {
           </div>
 
           <span className="text-xs text-slate-500 font-medium self-center">
-            Showing {filteredExercises.length} exercise{filteredExercises.length === 1 ? '' : 's'}
+            Showing {filteredExercises.length} prescribed exercise{filteredExercises.length === 1 ? '' : 's'}
           </span>
         </div>
 
@@ -214,7 +253,7 @@ export const PatientExerciseView: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Exercises Grid with Purpose-Built 4-Pose Continuous Demonstration Visuals */}
+      {/* Prescribed Exercises Grid */}
       <div className="space-y-8">
         {(filteredExercises || []).map((exercise) => {
           const isCompleted = (dailyLog.exercisesCompleted || []).includes(exercise.id);
@@ -244,7 +283,7 @@ export const PatientExerciseView: React.FC = () => {
                         {exercise.category}
                       </span>
                       <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md">
-                        ⏱️ {exercise.recommendedDose.sets} Sets • {exercise.recommendedDose.repsOrDuration}
+                        ⏱️ Prescribed: {exercise.recommendedDose.sets} Sets • {exercise.recommendedDose.repsOrDuration}
                       </span>
                     </div>
 
@@ -276,7 +315,7 @@ export const PatientExerciseView: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black uppercase tracking-wider text-teal-900 flex items-center gap-1.5">
                       <Sparkles className="w-4 h-4 text-teal-600" />
-                      Continuous 4-Pose Biomechanical Movement Sequence:
+                      4-Pose Biomechanical Movement Sequence:
                     </span>
                     <span className="text-[11px] text-teal-700 font-bold bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
                       Start ➔ Descent ➔ Peak Depth ➔ Lockout
@@ -354,10 +393,10 @@ export const PatientExerciseView: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Breathing & Tempo Cadence */}
+                  {/* Breathing & Doctor Guidance */}
                   <div className="space-y-1.5">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                      Breathing Cadence:
+                      Breathing & Cadence:
                     </span>
                     <div className="p-2.5 bg-emerald-50/70 rounded-xl border border-emerald-200/80 text-[11px] text-emerald-950 flex items-start gap-2">
                       <Wind className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
