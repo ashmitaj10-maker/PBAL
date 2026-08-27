@@ -27,11 +27,13 @@ import {
   Wind,
   Camera,
   Maximize2,
-  Stethoscope
+  Stethoscope,
+  FileText,
+  Footprints
 } from 'lucide-react';
 import { ExerciseDetailItem, ExercisePhotoPose, EXERCISE_GUIDE_CATALOG } from '../../data/exerciseGuideData';
 
-type ExerciseCategoryFilter = 'All' | 'Strength & Tone' | 'Core & Posture' | 'Cardio & Metabolic' | 'Mobility & Joint Health';
+type ExerciseCategoryFilter = 'All' | 'Strength & Tone' | 'Core & Posture' | 'Cardio & Metabolic' | 'Mobility & Joint Health' | 'Rehab / Low-Impact' | 'Sports & Lifestyle';
 
 export const PatientExerciseView: React.FC = () => {
   const { 
@@ -74,28 +76,41 @@ export const PatientExerciseView: React.FC = () => {
       return assignedItems.map(assigned => {
         const catalogMatch = EXERCISE_GUIDE_CATALOG.find(
           c => c.name.toLowerCase() === assigned.name.toLowerCase() || c.id === assigned.guideId
-        ) || EXERCISE_GUIDE_CATALOG[0];
+        );
 
         return {
-          ...catalogMatch,
           id: assigned.id,
           name: assigned.name,
-          category: (assigned.category || catalogMatch.category) as any,
-          purpose: assigned.purpose || catalogMatch.purpose,
-          targetMuscles: assigned.targetMuscles || catalogMatch.targetMuscles,
-          primaryMover: assigned.primaryMover || catalogMatch.primaryMover,
-          compositeImageUrl: assigned.compositeImageUrl || catalogMatch.compositeImageUrl,
+          category: (assigned.category || catalogMatch?.category || 'Strength & Tone') as any,
+          purpose: assigned.purpose || assigned.description || catalogMatch?.purpose || 'Prescribed clinical movement for metabolic conditioning.',
+          targetMuscles: assigned.targetMuscles || catalogMatch?.targetMuscles || ['Target Muscle Group', 'Core'],
+          primaryMover: assigned.primaryMover || catalogMatch?.primaryMover || (assigned.targetMuscles?.[0] || 'Target Musculature'),
+          secondaryStabilizers: assigned.secondaryStabilizers || catalogMatch?.secondaryStabilizers || ['Core Stabilizers'],
+          startingPosition: catalogMatch?.startingPosition || 'Adopt a balanced, upright starting stance with relaxed shoulders and active core.',
+          correctForm: catalogMatch?.correctForm || (assigned.howToPerform || 'Maintain controlled cadence and proper joint alignment throughout.'),
+          stepByStepInstructions: assigned.instructions?.length 
+            ? assigned.instructions 
+            : (catalogMatch?.stepByStepInstructions || [assigned.howToPerform || 'Execute the movement with controlled breathing and strict posture.']),
+          breathingGuidance: catalogMatch?.breathingGuidance || 'Maintain relaxed, rhythmic nasal breathing: Inhale on preparation/descent, exhale on drive.',
+          tempoGuidance: assigned.tempoGuidance || catalogMatch?.tempoGuidance || 'Controlled steady cadence.',
+          compositeImageUrl: assigned.compositeImageUrl || catalogMatch?.compositeImageUrl || '',
+          photoSequence: catalogMatch?.photoSequence || [],
           recommendedDose: {
-            sets: assigned.sets || catalogMatch.recommendedDose.sets,
-            repsOrDuration: assigned.reps || catalogMatch.recommendedDose.repsOrDuration,
-            restBetweenSets: assigned.restSeconds || catalogMatch.recommendedDose.restBetweenSets
+            sets: assigned.sets || catalogMatch?.recommendedDose.sets || 1,
+            repsOrDuration: assigned.reps || (assigned.durationMinutes ? `${assigned.durationMinutes} mins` : catalogMatch?.recommendedDose.repsOrDuration || '12-15 reps'),
+            restBetweenSets: assigned.restSeconds || catalogMatch?.recommendedDose.restBetweenSets || '60 seconds'
           },
+          restAndRecovery: catalogMatch?.restAndRecovery || 'Rest as prescribed between sets. Hydrate with electrolyte water.',
+          commonMistakes: catalogMatch?.commonMistakes || [
+            'Rushing through repetitions without controlled tempo',
+            'Compromising spine alignment or joint posture'
+          ],
           safetyTips: assigned.doctorNotes 
-            ? [`Doctor's Note: ${assigned.doctorNotes}`, ...catalogMatch.safetyTips]
-            : catalogMatch.safetyTips,
+            ? [`Doctor's Instruction: ${assigned.doctorNotes}`, ...(catalogMatch?.safetyTips || [])]
+            : (catalogMatch?.safetyTips || ['Stop immediately if you experience sharp pain.']),
           modifications: assigned.frequencyDays?.length 
             ? `Assigned Days: ${assigned.frequencyDays.join(', ')} • Intensity: ${assigned.intensity || 'Moderate'}`
-            : catalogMatch.modifications
+            : (catalogMatch?.modifications || `Scheduled for ${patient?.name || 'patient'}`)
         };
       });
     }
@@ -177,14 +192,14 @@ export const PatientExerciseView: React.FC = () => {
               My Prescribed Exercise Plan
             </h1>
             <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
-              Tailored movements prescribed by your clinical dietitian with 4-pose demonstration visuals showing the exact starting posture, descent path, lowest position, and return to standing.
+              Personalized physical activities and exercises prescribed by your clinical dietitian with movement demonstrations, execution instructions, and custom advice.
             </p>
           </div>
 
           {/* Quick Stats Pill */}
           <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/20 shrink-0">
             <div className="text-center px-2">
-              <span className="text-[10px] uppercase font-bold text-slate-300 block">Assigned Exercises</span>
+              <span className="text-[10px] uppercase font-bold text-slate-300 block">Prescribed</span>
               <span className="text-base font-black text-white">{displayExercises.length} Movements</span>
             </div>
             <div className="w-px h-8 bg-white/20" />
@@ -220,7 +235,7 @@ export const PatientExerciseView: React.FC = () => {
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
             <input
               type="text"
-              placeholder="Search your assigned exercises (e.g. squats, glutes, core, hamstrings)..."
+              placeholder="Search your prescribed exercises (e.g. walking, squats, glutes, core, yoga)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full text-xs sm:text-sm pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-teal-500 font-medium text-slate-900 transition-all"
@@ -274,16 +289,11 @@ export const PatientExerciseView: React.FC = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-lg border ${
-                        exercise.category === 'Strength & Tone' ? 'bg-indigo-50 text-indigo-800 border-indigo-200' :
-                        exercise.category === 'Core & Posture' ? 'bg-amber-50 text-amber-900 border-amber-200' :
-                        exercise.category === 'Cardio & Metabolic' ? 'bg-rose-50 text-rose-800 border-rose-200' :
-                        'bg-teal-50 text-teal-800 border-teal-200'
-                      }`}>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-lg border bg-teal-50 text-teal-800 border-teal-200">
                         {exercise.category}
                       </span>
                       <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md">
-                        ⏱️ Prescribed: {exercise.recommendedDose.sets} Sets • {exercise.recommendedDose.repsOrDuration}
+                        ⏱️ Prescribed: {exercise.recommendedDose.sets} {exercise.recommendedDose.sets === 1 ? 'Set' : 'Sets'} • {exercise.recommendedDose.repsOrDuration}
                       </span>
                     </div>
 
@@ -310,68 +320,82 @@ export const PatientExerciseView: React.FC = () => {
                   </div>
                 </div>
 
-                {/* PURPOSE-BUILT 4-POSE MOVEMENT DEMONSTRATION GRAPHIC */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black uppercase tracking-wider text-teal-900 flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-teal-600" />
-                      4-Pose Biomechanical Movement Sequence:
-                    </span>
-                    <span className="text-[11px] text-teal-700 font-bold bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
-                      Start ➔ Descent ➔ Peak Depth ➔ Lockout
-                    </span>
-                  </div>
-
-                  {/* Main Sequence Image */}
-                  <div 
-                    onClick={() => {
-                      setActiveExerciseModal(exercise);
-                      setSelectedStepIndex(0);
-                    }}
-                    className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 group cursor-pointer shadow-2xs hover:border-teal-400 transition-all"
-                  >
-                    <img
-                      src={exercise.compositeImageUrl}
-                      alt={`${exercise.name} 4-step demonstration`}
-                      className="w-full object-cover group-hover:scale-[1.01] transition-transform duration-300"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-4">
-                      <span className="text-xs font-bold text-white bg-slate-900/80 px-3 py-1.5 rounded-xl backdrop-blur-sm flex items-center gap-1.5">
-                        <Maximize2 className="w-3.5 h-3.5" /> Click to Inspect Form Breakdown
+                {/* 4-POSE MOVEMENT DEMONSTRATION GRAPHIC OR WRITTEN ACTIVITY BANNER */}
+                {exercise.compositeImageUrl ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black uppercase tracking-wider text-teal-900 flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-teal-600" />
+                        4-Pose Movement Demonstration Sequence:
+                      </span>
+                      <span className="text-[11px] text-teal-700 font-bold bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
+                        Start ➔ Movement ➔ Peak ➔ Lockout
                       </span>
                     </div>
-                  </div>
 
-                  {/* 4 Step Summary Badges */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {exercise.photoSequence.map((pose, pIdx) => (
-                      <div 
-                        key={pIdx} 
-                        onClick={() => {
-                          setActiveExerciseModal(exercise);
-                          setSelectedStepIndex(pIdx);
-                        }}
-                        className="p-2.5 bg-slate-50 hover:bg-teal-50/60 rounded-xl border border-slate-200 text-xs space-y-1 transition-all cursor-pointer"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-black uppercase text-teal-800">
-                            Pose {pose.stepNumber}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            {pose.motionDirection}
-                          </span>
-                        </div>
-                        <div className="font-bold text-slate-900 truncate">
-                          {pose.stepTitle.split('.')[1] || pose.stepTitle}
-                        </div>
-                        <p className="text-[11px] text-slate-600 leading-snug line-clamp-2">
-                          {pose.postureCue}
-                        </p>
+                    {/* Main Sequence Image */}
+                    <div 
+                      onClick={() => {
+                        setActiveExerciseModal(exercise);
+                        setSelectedStepIndex(0);
+                      }}
+                      className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 group cursor-pointer shadow-2xs hover:border-teal-400 transition-all"
+                    >
+                      <img
+                        src={exercise.compositeImageUrl}
+                        alt={`${exercise.name} demonstration`}
+                        className="w-full object-cover group-hover:scale-[1.01] transition-transform duration-300"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-4">
+                        <span className="text-xs font-bold text-white bg-slate-900/80 px-3 py-1.5 rounded-xl backdrop-blur-sm flex items-center gap-1.5">
+                          <Maximize2 className="w-3.5 h-3.5" /> Click to Inspect Form Breakdown
+                        </span>
                       </div>
-                    ))}
+                    </div>
+
+                    {/* 4 Step Summary Badges if poses exist */}
+                    {exercise.photoSequence && exercise.photoSequence.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {exercise.photoSequence.map((pose, pIdx) => (
+                          <div 
+                            key={pIdx} 
+                            onClick={() => {
+                              setActiveExerciseModal(exercise);
+                              setSelectedStepIndex(pIdx);
+                            }}
+                            className="p-2.5 bg-slate-50 hover:bg-teal-50/60 rounded-xl border border-slate-200 text-xs space-y-1 transition-all cursor-pointer"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-black uppercase text-teal-800">
+                                Pose {pose.stepNumber}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                {pose.motionDirection}
+                              </span>
+                            </div>
+                            <div className="font-bold text-slate-900 truncate">
+                              {pose.stepTitle.split('.')[1] || pose.stepTitle}
+                            </div>
+                            <p className="text-[11px] text-slate-600 leading-snug line-clamp-2">
+                              {pose.postureCue}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
+                ) : (
+                  <div className="p-4 bg-teal-50/60 rounded-2xl border border-teal-200 space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-bold text-teal-950">
+                      <FileText className="w-4 h-4 text-teal-700" />
+                      <span>Doctor's Execution Protocol:</span>
+                    </div>
+                    <p className="text-xs text-slate-700 leading-relaxed">
+                      {exercise.correctForm}
+                    </p>
+                  </div>
+                )}
 
                 {/* Target Muscles & Breathing Guide */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100 text-xs">
@@ -379,13 +403,13 @@ export const PatientExerciseView: React.FC = () => {
                   {/* Prime Movers & Stabilizers */}
                   <div className="space-y-1.5">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                      Target Muscle Groups:
+                      Target Muscle Focus:
                     </span>
                     <div className="flex flex-wrap gap-1.5">
                       <span className="bg-emerald-100 text-emerald-900 px-2.5 py-1 rounded-lg font-bold border border-emerald-200">
                         🎯 {exercise.primaryMover}
                       </span>
-                      {exercise.targetMuscles.map((muscle, mIdx) => (
+                      {exercise.targetMuscles.slice(0, 3).map((muscle, mIdx) => (
                         <span key={mIdx} className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-medium border border-slate-200">
                           {muscle}
                         </span>
@@ -418,7 +442,7 @@ export const PatientExerciseView: React.FC = () => {
                   className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors shadow-xs cursor-pointer"
                 >
                   <BookOpen className="w-4 h-4 text-teal-300" />
-                  View Step-by-Step Biomechanics & Full Pose Breakdown
+                  View Detailed Instructions & Form Guide
                 </button>
               </div>
 
@@ -442,7 +466,7 @@ export const PatientExerciseView: React.FC = () => {
                     {activeExerciseModal.category}
                   </span>
                   <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md">
-                    ⏱️ {activeExerciseModal.recommendedDose.sets} Sets • {activeExerciseModal.recommendedDose.repsOrDuration}
+                    ⏱️ {activeExerciseModal.recommendedDose.sets} {activeExerciseModal.recommendedDose.sets === 1 ? 'Set' : 'Sets'} • {activeExerciseModal.recommendedDose.repsOrDuration}
                   </span>
                   {activeExerciseModal.tempoGuidance && (
                     <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
@@ -469,93 +493,85 @@ export const PatientExerciseView: React.FC = () => {
             {/* Modal Content */}
             <div className="p-6 overflow-y-auto space-y-6">
               
-              {/* FULL-SIZE PURPOSE-BUILT 4-POSE MOVEMENT SEQUENCE GRAPHIC */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-teal-600" />
-                    Complete 4-Pose Continuous Movement Demonstration:
-                  </h3>
-                  <span className="text-[10px] text-teal-700 font-bold bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">
-                    Same Model • Same Lighting • Same Camera Angle
-                  </span>
-                </div>
-
-                {/* Large Demonstration Visual */}
-                <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm">
-                  <img
-                    src={activeExerciseModal.compositeImageUrl}
-                    alt={`${activeExerciseModal.name} full demonstration`}
-                    className="w-full object-contain"
-                  />
-                </div>
-
-                {/* Step-by-Step Pose Breakdown Tabs */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                  {activeExerciseModal.photoSequence.map((pose, pIdx) => (
-                    <button
-                      key={pIdx}
-                      onClick={() => setSelectedStepIndex(pIdx)}
-                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                        selectedStepIndex === pIdx
-                          ? 'bg-teal-900 text-white border-teal-950 shadow-xs ring-2 ring-teal-500/20'
-                          : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className={`text-[10px] font-black uppercase tracking-wider ${
-                          selectedStepIndex === pIdx ? 'text-emerald-300' : 'text-slate-500'
-                        }`}>
-                          Pose {pose.stepNumber}
-                        </span>
-                        {selectedStepIndex === pIdx && (
-                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                        )}
-                      </div>
-                      <div className="text-xs font-bold truncate">
-                        {pose.stepTitle.split('.')[1] || pose.stepTitle}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Active Selected Step Callout Box */}
-                {activeExerciseModal.photoSequence[selectedStepIndex] && (
-                  <div className="p-4 bg-teal-50/80 border border-teal-200 rounded-2xl space-y-2 animate-in fade-in duration-150">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-teal-950">
-                        {activeExerciseModal.photoSequence[selectedStepIndex].stepTitle}
-                      </span>
-                      <span className="text-[10px] font-bold text-teal-800 bg-white px-2 py-0.5 rounded-full border border-teal-200">
-                        {activeExerciseModal.photoSequence[selectedStepIndex].motionDirection}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-700 font-medium">
-                      💡 <strong>Form Cue:</strong> {activeExerciseModal.photoSequence[selectedStepIndex].postureCue}
-                    </p>
-                    <p className="text-[11px] text-emerald-800 font-mono">
-                      ✓ <strong>Joint Alignment:</strong> {activeExerciseModal.photoSequence[selectedStepIndex].jointAlignment}
-                    </p>
+              {/* FULL-SIZE 4-POSE MOVEMENT SEQUENCE GRAPHIC IF AVAILABLE */}
+              {activeExerciseModal.compositeImageUrl && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-teal-600" />
+                      Complete 4-Pose Movement Demonstration:
+                    </h3>
+                    <span className="text-[10px] text-teal-700 font-bold bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">
+                      Consistent Studio Series
+                    </span>
                   </div>
-                )}
-              </div>
 
-              {/* Starting Position & Joint Alignment */}
-              <div className="space-y-2">
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                  <Target className="w-4 h-4 text-teal-600" />
-                  1. Starting Position & Joint Setup:
-                </h3>
-                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-700 leading-relaxed font-medium">
-                  {activeExerciseModal.startingPosition}
+                  <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm">
+                    <img
+                      src={activeExerciseModal.compositeImageUrl}
+                      alt={`${activeExerciseModal.name} full demonstration`}
+                      className="w-full object-contain"
+                    />
+                  </div>
+
+                  {/* Step Tabs if poses exist */}
+                  {activeExerciseModal.photoSequence && activeExerciseModal.photoSequence.length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                      {activeExerciseModal.photoSequence.map((pose, pIdx) => (
+                        <button
+                          key={pIdx}
+                          onClick={() => setSelectedStepIndex(pIdx)}
+                          className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                            selectedStepIndex === pIdx
+                              ? 'bg-teal-900 text-white border-teal-950 shadow-xs ring-2 ring-teal-500/20'
+                              : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className={`text-[10px] font-black uppercase tracking-wider ${
+                              selectedStepIndex === pIdx ? 'text-emerald-300' : 'text-slate-500'
+                            }`}>
+                              Pose {pose.stepNumber}
+                            </span>
+                            {selectedStepIndex === pIdx && (
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                            )}
+                          </div>
+                          <div className="text-xs font-bold truncate">
+                            {pose.stepTitle.split('.')[1] || pose.stepTitle}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Active Selected Step Callout Box */}
+                  {activeExerciseModal.photoSequence && activeExerciseModal.photoSequence[selectedStepIndex] && (
+                    <div className="p-4 bg-teal-50/80 border border-teal-200 rounded-2xl space-y-2 animate-in fade-in duration-150">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-teal-950">
+                          {activeExerciseModal.photoSequence[selectedStepIndex].stepTitle}
+                        </span>
+                        <span className="text-[10px] font-bold text-teal-800 bg-white px-2 py-0.5 rounded-full border border-teal-200">
+                          {activeExerciseModal.photoSequence[selectedStepIndex].motionDirection}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-700 font-medium">
+                        💡 <strong>Form Cue:</strong> {activeExerciseModal.photoSequence[selectedStepIndex].postureCue}
+                      </p>
+                      <p className="text-[11px] text-emerald-800 font-mono">
+                        ✓ <strong>Joint Alignment:</strong> {activeExerciseModal.photoSequence[selectedStepIndex].jointAlignment}
+                      </p>
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
 
               {/* Step-by-Step Movement Instructions */}
               <div className="space-y-2">
                 <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                   <Layers className="w-4 h-4 text-teal-600" />
-                  2. Step-by-Step Execution Breakdown:
+                  Execution & Step-by-Step Breakdown:
                 </h3>
                 <div className="space-y-2">
                   {activeExerciseModal.stepByStepInstructions.map((step, sIdx) => (
@@ -580,48 +596,18 @@ export const PatientExerciseView: React.FC = () => {
                 </p>
               </div>
 
-              {/* Common Mistakes & Safety Tips */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                
-                {/* Mistakes to Avoid */}
-                <div className="p-4 bg-rose-50 rounded-2xl border border-rose-200 space-y-1.5">
-                  <strong className="text-rose-900 font-bold flex items-center gap-1.5">
-                    <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-                    Common Mistakes to Avoid:
-                  </strong>
-                  <ul className="list-disc list-inside space-y-1 text-[11px] text-rose-900">
-                    {activeExerciseModal.commonMistakes.map((mistake, mIdx) => (
-                      <li key={mIdx}>{mistake}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Safety & Form Tips */}
-                <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 space-y-1.5">
-                  <strong className="text-amber-900 font-bold flex items-center gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-amber-700" />
-                    Safety & Joint Protection:
-                  </strong>
-                  <ul className="list-disc list-inside space-y-1 text-[11px] text-amber-900">
-                    {activeExerciseModal.safetyTips.map((tip, tIdx) => (
-                      <li key={tIdx}>{tip}</li>
-                    ))}
-                  </ul>
-                </div>
-
+              {/* Safety & Form Tips */}
+              <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 space-y-1.5 text-xs">
+                <strong className="text-amber-900 font-bold flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-700" />
+                  Clinical Advice & Precautions:
+                </strong>
+                <ul className="list-disc list-inside space-y-1 text-[11px] text-amber-900">
+                  {activeExerciseModal.safetyTips.map((tip, tIdx) => (
+                    <li key={tIdx}>{tip}</li>
+                  ))}
+                </ul>
               </div>
-
-              {/* Beginner & Advanced Modifications */}
-              {activeExerciseModal.modifications && (
-                <div className="p-4 bg-purple-50 rounded-2xl border border-purple-200 space-y-1 text-xs text-purple-950">
-                  <strong className="text-purple-900 font-bold">
-                    🔄 Level Modifications & Easier Alternatives:
-                  </strong>
-                  <p className="text-[11px] leading-relaxed">
-                    {activeExerciseModal.modifications}
-                  </p>
-                </div>
-              )}
 
               {/* Integrated Rest & Hold Timer */}
               <div className="p-4 bg-slate-900 text-white rounded-2xl space-y-3">

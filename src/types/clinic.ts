@@ -351,6 +351,7 @@ export interface ExerciseItem {
   guideId?: string;
   compositeImageUrl?: string;
   durationMinutes?: number;
+  durationText?: string;
   sets?: number;
   reps?: string;
   restSeconds?: string;
@@ -358,15 +359,20 @@ export interface ExerciseItem {
   targetHeartRateZone?: string;
   timeOfDay: 'Morning' | 'Post-Meal' | 'Evening' | 'Anytime' | string;
   frequencyDays?: string[];
+  frequencyText?: string;
   difficulty?: 'Beginner' | 'Moderate' | 'Advanced' | string;
   doctorNotes?: string;
   purpose?: string;
+  description?: string;
+  howToPerform?: string;
   targetMuscles?: string[];
   primaryMover?: string;
   secondaryStabilizers?: string[];
   tempoGuidance?: string;
   instructions: string[];
   precautions?: string;
+  isCustomActivity?: boolean;
+  hasAiVisual?: boolean;
   completed?: boolean;
 }
 

@@ -537,5 +537,133 @@ export const EXERCISE_GUIDE_CATALOG: ExerciseDetailItem[] = [
         motionDirection: '8-10 Wave Cycles'
       }
     ]
+  },
+  {
+    id: 'ex-guide-walking',
+    name: 'Brisk Walking & Stride Mechanics',
+    category: 'Cardio & Metabolic',
+    purpose: 'Zone 2 low-impact aerobic movement that enhances mitochondrial density, clears post-meal glucose spikes, and burns visceral fat without elevating joint stress or cortisol.',
+    targetMuscles: ['Cardiovascular System', 'Calves (Soleus/Gastrocnemius)', 'Gluteus Medius', 'Quadriceps'],
+    primaryMover: 'Calves & Gluteal Muscle Group',
+    secondaryStabilizers: ['Core Cylinder', 'Tibialis Anterior', 'Hip Flexors'],
+    startingPosition: 'Stand tall with chest lifted, shoulders relaxed down and back, core lightly engaged, and eyes looking 10-15 feet ahead.',
+    correctForm: 'Maintain a brisk rhythmic cadence (100-115 steps/min). Strike lightly with the heel, roll smoothly through the midfoot arch, and push off the big toe with natural contralateral arm swing.',
+    stepByStepInstructions: [
+      '**1. Heel Strike**: Land softly on the heel of your leading foot with knee slightly soft, not hyperextended.',
+      '**2. Mid-Stance Roll**: Smoothly transfer bodyweight along the outer edge and arch toward the ball of the foot while swinging opposite arm forward.',
+      '**3. Toe Push-Off**: Drive actively through the big toe and ball of the foot, engaging the calf and glute to propel forward.',
+      '**4. Swing Phase**: Swing the trailing leg forward in a compact arc, staying upright without leaning excessively forward.'
+    ],
+    breathingGuidance: 'Rhythmic nasal breathing: 3 strides inhale, 3 strides exhale to optimize oxygen delivery and parasympathetic tone.',
+    tempoGuidance: 'Brisk continuous pace: 100 - 115 steps per minute.',
+    recommendedDose: {
+      sets: 1,
+      repsOrDuration: '25 - 45 minutes',
+      restBetweenSets: 'Continuous steady-state'
+    },
+    restAndRecovery: 'Cooldown with 3 minutes of gentle slow walking and hydration.',
+    commonMistakes: [
+      'Overstriding (landing heel too far ahead of hips, creating braking forces)',
+      'Slouching forward or looking down at smartphone while walking',
+      'Restricting arm swing, which reduces rotational core engagement'
+    ],
+    safetyTips: [
+      'Wear supportive cushioned walking shoes with adequate arch support',
+      'Ideal timing: 15-30 minutes immediately following lunch or dinner'
+    ],
+    modifications: 'Can be done on a flat walking pad or outdoor park trail.',
+    compositeImageUrl: '/exercises/walking_guide.jpg',
+    photoSequence: [
+      {
+        stepNumber: 1,
+        stepTitle: '1. Heel Strike',
+        postureCue: 'Land softly on heel with upright torso and neutral neck.',
+        jointAlignment: 'Soft knee • Chest high • Neutral pelvis',
+        motionDirection: 'Initial Contact ➔'
+      },
+      {
+        stepNumber: 2,
+        stepTitle: '2. Mid-Stance Roll',
+        postureCue: 'Transfer weight smoothly through midfoot arch with natural opposite arm swing.',
+        jointAlignment: 'Hips level • Relaxed shoulders • Core engaged',
+        motionDirection: 'Weight Transfer ➔'
+      },
+      {
+        stepNumber: 3,
+        stepTitle: '3. Toe Push-Off',
+        postureCue: 'Push off through big toe and ball of foot, firing glute and calf.',
+        jointAlignment: 'Full ankle plantarflexion • Glute contraction',
+        motionDirection: 'Forward Propulsion ➔'
+      },
+      {
+        stepNumber: 4,
+        stepTitle: '4. Swing Phase',
+        postureCue: 'Swing trailing leg forward smoothly into the next stride with rhythmic nasal breath.',
+        jointAlignment: 'Continuous forward momentum • 100-115 BPM cadence',
+        motionDirection: 'Continuous Rhythm'
+      }
+    ]
+  },
+  {
+    id: 'ex-guide-yoga',
+    name: 'Yoga Sun Salutation & Spinal Flow',
+    category: 'Mobility & Joint Health',
+    purpose: 'Full-body restorative dynamic flow that mobilizes the thoracic spine, lengthens tight hamstrings, stimulates lymphatic drainage, and lowers sympathetic stress.',
+    targetMuscles: ['Entire Posterior Chain', 'Spinal Articulators', 'Shoulder Girdle', 'Hip Flexors'],
+    primaryMover: 'Spinal Articulators & Hamstrings',
+    secondaryStabilizers: ['Core Transverse Abdominis', 'Gluteus Medius', 'Quadriceps'],
+    startingPosition: 'Stand tall at the top of your mat in Mountain Pose (Tadasana), feet hip-width, palms pressed together at heart center.',
+    correctForm: 'Synchronize each physical movement with a dedicated inhale or exhale. Hinge strictly from hips with flat spine during forward folds.',
+    stepByStepInstructions: [
+      '**1. Mountain Pose (Start)**: Stand tall with palms at heart center, tailbone lengthened, crown reaching high.',
+      '**2. Upward Salute (Inhale)**: Inhale deeply as you sweep arms overhead in a wide circle, gently arching the upper back.',
+      '**3. Standing Forward Fold (Exhale)**: Exhale fully, hinge forward from the hips with flat back, reaching fingertips toward shins or floor.',
+      '**4. Half-Lift Flat Back (Inhale)**: Inhale and lift torso halfway up, placing hands on shins with spine long and gaze down.'
+    ],
+    breathingGuidance: 'Slow continuous Ujjayi nasal breath: Inhale as chest opens; exhale as body folds.',
+    tempoGuidance: '4 seconds per phase synchronized with breath.',
+    recommendedDose: {
+      sets: 3,
+      repsOrDuration: '5 - 8 flow rounds',
+      restBetweenSets: '30 seconds'
+    },
+    restAndRecovery: 'Rest in Child’s Pose or Mountain Pose for 60 seconds after completing rounds.',
+    commonMistakes: [
+      'Rounding the lower back aggressively instead of hinging at the hips',
+      'Forcing hands to the floor by locking knees'
+    ],
+    safetyTips: ['Keep a generous bend in the knees during forward folds if hamstrings are tight.'],
+    modifications: 'Can be done with yoga blocks placed under hands.',
+    compositeImageUrl: '/exercises/yoga_guide.jpg',
+    photoSequence: [
+      {
+        stepNumber: 1,
+        stepTitle: '1. Mountain Pose',
+        postureCue: 'Stand tall with palms together at heart center. Lengthen spine and ground feet.',
+        jointAlignment: 'Feet grounded • Shoulders back • Neutral pelvis',
+        motionDirection: 'Inhale & Prepare ➔'
+      },
+      {
+        stepNumber: 2,
+        stepTitle: '2. Upward Salute',
+        postureCue: 'Inhale and sweep arms overhead with gentle upper thoracic arch.',
+        jointAlignment: 'Arms extended • Shoulders away from ears • Chest open',
+        motionDirection: 'Inhale Overhead ➔'
+      },
+      {
+        stepNumber: 3,
+        stepTitle: '3. Forward Fold',
+        postureCue: 'Exhale and hinge from hips with soft knees, reaching hands toward floor.',
+        jointAlignment: 'Hips over ankles • Neck completely relaxed • Hamstrings lengthened',
+        motionDirection: 'Exhale Fold ➔'
+      },
+      {
+        stepNumber: 4,
+        stepTitle: '4. Half-Lift Flat Back',
+        postureCue: 'Inhale and lift torso halfway with flat table-like back, hands on shins.',
+        jointAlignment: 'Spine elongated • Gaze down at floor • Core lightly engaged',
+        motionDirection: 'Inhale & Reset'
+      }
+    ]
   }
 ];
