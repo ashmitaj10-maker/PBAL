@@ -57,7 +57,7 @@ export const PatientExerciseView: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<ExerciseCategoryFilter>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeExerciseModal, setActiveExerciseModal] = useState<ExerciseDetailItem | null>(null);
-  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number>(0);
+  const [selectedStepIndex, setSelectedStepIndex] = useState<number>(0);
 
   // Active Timer state for timed exercises
   const [timerSeconds, setTimerSeconds] = useState<number>(45);
@@ -131,14 +131,14 @@ export const PatientExerciseView: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2 max-w-2xl">
             <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-300">
-              <Camera className="w-4 h-4 text-emerald-400" />
-              Professional Fitness Photography & Movement Sequence Guide
+              <Zap className="w-4 h-4 text-emerald-400" />
+              Purpose-Built Exercise Visual Sequences
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
               Guided Exercise & Form Reference
             </h1>
             <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
-              Demonstrated through sequential professional fitness photography showing the exact starting posture, descent path, peak depth, and return to standing for safe and effective form.
+              Every exercise features a continuous 4-pose demonstration visual showing the exact starting posture, descent path, lowest position, and return to standing.
             </p>
           </div>
 
@@ -214,8 +214,8 @@ export const PatientExerciseView: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Exercises Grid with Realistic 4-Frame Photographic Sequences */}
-      <div className="space-y-6">
+      {/* Main Exercises Grid with Purpose-Built 4-Pose Continuous Demonstration Visuals */}
+      <div className="space-y-8">
         {(filteredExercises || []).map((exercise) => {
           const isCompleted = (dailyLog.exercisesCompleted || []).includes(exercise.id);
 
@@ -271,61 +271,70 @@ export const PatientExerciseView: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 4-POSE PHOTOREALISTIC MOVEMENT SEQUENCE STRIP */}
-                <div className="space-y-2">
+                {/* PURPOSE-BUILT 4-POSE MOVEMENT DEMONSTRATION GRAPHIC */}
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black uppercase tracking-wider text-teal-900 flex items-center gap-1.5">
-                      <Camera className="w-4 h-4 text-teal-600" />
-                      4-Step Movement Sequence:
+                      <Sparkles className="w-4 h-4 text-teal-600" />
+                      Continuous 4-Pose Biomechanical Movement Sequence:
                     </span>
-                    <span className="text-[11px] text-teal-700 font-semibold hidden sm:inline">
-                      Starting ➔ Lowering ➔ Lowest Position ➔ Return
+                    <span className="text-[11px] text-teal-700 font-bold bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
+                      Start ➔ Descent ➔ Peak Depth ➔ Lockout
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {/* Main Sequence Image */}
+                  <div 
+                    onClick={() => {
+                      setActiveExerciseModal(exercise);
+                      setSelectedStepIndex(0);
+                    }}
+                    className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 group cursor-pointer shadow-2xs hover:border-teal-400 transition-all"
+                  >
+                    <img
+                      src={exercise.compositeImageUrl}
+                      alt={`${exercise.name} 4-step demonstration`}
+                      className="w-full object-cover group-hover:scale-[1.01] transition-transform duration-300"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-4">
+                      <span className="text-xs font-bold text-white bg-slate-900/80 px-3 py-1.5 rounded-xl backdrop-blur-sm flex items-center gap-1.5">
+                        <Maximize2 className="w-3.5 h-3.5" /> Click to Inspect Form Breakdown
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 4 Step Summary Badges */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {exercise.photoSequence.map((pose, pIdx) => (
                       <div 
-                        key={pIdx}
+                        key={pIdx} 
                         onClick={() => {
                           setActiveExerciseModal(exercise);
-                          setSelectedPhotoIndex(pIdx);
+                          setSelectedStepIndex(pIdx);
                         }}
-                        className="group bg-slate-50 hover:bg-teal-50/50 rounded-2xl border border-slate-200 p-2 space-y-2 transition-all cursor-pointer hover:border-teal-300 hover:shadow-xs"
+                        className="p-2.5 bg-slate-50 hover:bg-teal-50/60 rounded-xl border border-slate-200 text-xs space-y-1 transition-all cursor-pointer"
                       >
-                        {/* Realistic Photography Image with Step Number Overlay */}
-                        <div className="relative aspect-4/3 rounded-xl overflow-hidden bg-slate-900/10">
-                          <img
-                            src={pose.imageUrl}
-                            alt={pose.stepTitle}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            loading="lazy"
-                          />
-                          <div className="absolute top-2 left-2 bg-slate-950/80 backdrop-blur-sm text-white px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider">
-                            Step {pose.stepNumber}
-                          </div>
-                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
-                            <span className="text-[10px] text-white font-bold flex items-center gap-1">
-                              <Maximize2 className="w-3 h-3" /> Zoom Form
-                            </span>
-                          </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black uppercase text-teal-800">
+                            Pose {pose.stepNumber}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {pose.motionDirection}
+                          </span>
                         </div>
-
-                        {/* Step Title & Posture Cue */}
-                        <div>
-                          <div className="text-xs font-bold text-slate-900 truncate">
-                            {pose.stepTitle}
-                          </div>
-                          <p className="text-[11px] text-slate-600 leading-snug line-clamp-2 mt-0.5">
-                            {pose.postureCue}
-                          </p>
+                        <div className="font-bold text-slate-900 truncate">
+                          {pose.stepTitle.split('.')[1] || pose.stepTitle}
                         </div>
+                        <p className="text-[11px] text-slate-600 leading-snug line-clamp-2">
+                          {pose.postureCue}
+                        </p>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* Target Muscles & Form Checklist */}
+                {/* Target Muscles & Breathing Guide */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100 text-xs">
                   
                   {/* Prime Movers & Stabilizers */}
@@ -365,7 +374,7 @@ export const PatientExerciseView: React.FC = () => {
                 <button
                   onClick={() => {
                     setActiveExerciseModal(exercise);
-                    setSelectedPhotoIndex(0);
+                    setSelectedStepIndex(0);
                   }}
                   className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors shadow-xs cursor-pointer"
                 >
@@ -380,11 +389,11 @@ export const PatientExerciseView: React.FC = () => {
       </div>
 
       {/* =========================================================================
-          DETAILED EXERCISE MODAL & INTERACTIVE PHOTOGRAPHIC FORM INSPECTOR
+          DETAILED EXERCISE MODAL & FULL-SIZE MOVEMENT SEQUENCE INSPECTOR
           ========================================================================= */}
       {activeExerciseModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[92vh] shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[92vh] shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             
             {/* Modal Header */}
             <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-4 bg-gradient-to-r from-teal-50/60 to-white">
@@ -421,70 +430,75 @@ export const PatientExerciseView: React.FC = () => {
             {/* Modal Content */}
             <div className="p-6 overflow-y-auto space-y-6">
               
-              {/* PHOTOGRAPHIC MULTI-FRAME SEQUENCE INSPECTOR */}
+              {/* FULL-SIZE PURPOSE-BUILT 4-POSE MOVEMENT SEQUENCE GRAPHIC */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                    <Camera className="w-4 h-4 text-teal-600" />
-                    Interactive Step Sequence Inspector:
+                    <Sparkles className="w-4 h-4 text-teal-600" />
+                    Complete 4-Pose Continuous Movement Demonstration:
                   </h3>
-                  <span className="text-[10px] text-teal-700 font-bold">
-                    Click any pose to view detailed form cues
+                  <span className="text-[10px] text-teal-700 font-bold bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">
+                    Same Model • Same Lighting • Same Camera Angle
                   </span>
                 </div>
 
-                {/* Active Large Display Photo */}
-                {activeExerciseModal.photoSequence[selectedPhotoIndex] && (
-                  <div className="bg-slate-950 rounded-2xl overflow-hidden border border-slate-200 relative group">
-                    <div className="aspect-16/9 w-full relative">
-                      <img
-                        src={activeExerciseModal.photoSequence[selectedPhotoIndex].imageUrl}
-                        alt={activeExerciseModal.photoSequence[selectedPhotoIndex].stepTitle}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent flex flex-col justify-end p-5 text-white space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-xs font-black">
-                            Step {activeExerciseModal.photoSequence[selectedPhotoIndex].stepNumber} of {activeExerciseModal.photoSequence.length}
-                          </span>
-                          <span className="text-sm font-bold text-white">
-                            {activeExerciseModal.photoSequence[selectedPhotoIndex].stepTitle}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-200 font-medium">
-                          💡 <strong>Form Cue:</strong> {activeExerciseModal.photoSequence[selectedPhotoIndex].postureCue}
-                        </p>
-                        <p className="text-[11px] text-emerald-300 font-mono">
-                          ✓ {activeExerciseModal.photoSequence[selectedPhotoIndex].jointAlignment}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {/* Large Demonstration Visual */}
+                <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm">
+                  <img
+                    src={activeExerciseModal.compositeImageUrl}
+                    alt={`${activeExerciseModal.name} full demonstration`}
+                    className="w-full object-contain"
+                  />
+                </div>
 
-                {/* 4 Thumbnails Selector Strip */}
-                <div className="grid grid-cols-4 gap-2">
+                {/* Step-by-Step Pose Breakdown Tabs */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
                   {activeExerciseModal.photoSequence.map((pose, pIdx) => (
                     <button
                       key={pIdx}
-                      onClick={() => setSelectedPhotoIndex(pIdx)}
-                      className={`relative aspect-4/3 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
-                        selectedPhotoIndex === pIdx
-                          ? 'border-emerald-500 ring-2 ring-emerald-300 scale-102'
-                          : 'border-slate-200 opacity-70 hover:opacity-100'
+                      onClick={() => setSelectedStepIndex(pIdx)}
+                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                        selectedStepIndex === pIdx
+                          ? 'bg-teal-900 text-white border-teal-950 shadow-xs ring-2 ring-teal-500/20'
+                          : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
                       }`}
                     >
-                      <img
-                        src={pose.imageUrl}
-                        alt={pose.stepTitle}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute top-1 left-1 bg-slate-900/80 text-white text-[9px] px-1.5 py-0.2 rounded font-black">
-                        {pIdx + 1}
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={`text-[10px] font-black uppercase tracking-wider ${
+                          selectedStepIndex === pIdx ? 'text-emerald-300' : 'text-slate-500'
+                        }`}>
+                          Pose {pose.stepNumber}
+                        </span>
+                        {selectedStepIndex === pIdx && (
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        )}
+                      </div>
+                      <div className="text-xs font-bold truncate">
+                        {pose.stepTitle.split('.')[1] || pose.stepTitle}
                       </div>
                     </button>
                   ))}
                 </div>
+
+                {/* Active Selected Step Callout Box */}
+                {activeExerciseModal.photoSequence[selectedStepIndex] && (
+                  <div className="p-4 bg-teal-50/80 border border-teal-200 rounded-2xl space-y-2 animate-in fade-in duration-150">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-teal-950">
+                        {activeExerciseModal.photoSequence[selectedStepIndex].stepTitle}
+                      </span>
+                      <span className="text-[10px] font-bold text-teal-800 bg-white px-2 py-0.5 rounded-full border border-teal-200">
+                        {activeExerciseModal.photoSequence[selectedStepIndex].motionDirection}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-700 font-medium">
+                      💡 <strong>Form Cue:</strong> {activeExerciseModal.photoSequence[selectedStepIndex].postureCue}
+                    </p>
+                    <p className="text-[11px] text-emerald-800 font-mono">
+                      ✓ <strong>Joint Alignment:</strong> {activeExerciseModal.photoSequence[selectedStepIndex].jointAlignment}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Starting Position & Joint Alignment */}

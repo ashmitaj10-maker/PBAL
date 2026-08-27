@@ -1,7 +1,6 @@
 export interface ExercisePhotoPose {
   stepNumber: number;
   stepTitle: string;
-  imageUrl: string;
   postureCue: string;
   jointAlignment: string;
   motionDirection: string;
@@ -29,6 +28,7 @@ export interface ExerciseDetailItem {
   commonMistakes: string[];
   safetyTips: string[];
   modifications?: string;
+  compositeImageUrl: string;
   photoSequence: ExercisePhotoPose[];
 }
 
@@ -67,35 +67,32 @@ export const EXERCISE_GUIDE_CATALOG: ExerciseDetailItem[] = [
       'Keep your eyes looking forward and slightly downward (not up at the ceiling) to protect cervical spine'
     ],
     modifications: 'Beginner: Chair Box Squats (sit to stand). Advanced: 3-Second Isometric Pause at the bottom with a 5kg-10kg dumbbell.',
+    compositeImageUrl: '/exercises/squat_guide.jpg',
     photoSequence: [
       {
         stepNumber: 1,
         stepTitle: '1. Starting Position',
-        imageUrl: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?auto=format&fit=crop&q=80&w=600',
         postureCue: 'Stand tall with feet shoulder-width apart, toes angled 10° out. Hands clasped at chest.',
         jointAlignment: 'Spine neutral • Weight centered over midfoot • Shoulders relaxed down',
         motionDirection: 'Inhale & Brace Core ➔'
       },
       {
         stepNumber: 2,
-        stepTitle: '2. Movement Into Squat',
-        imageUrl: 'https://images.unsplash.com/photo-1566241142559-40e1dab266c6?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '2. Controlled Descent',
         postureCue: 'Push hips backward and bend knees simultaneously. Lower body under control over 3s.',
         jointAlignment: 'Knees tracking over 2nd toe • Torso angled 65° upright • Heels pinned to floor',
         motionDirection: '3s Controlled Descent ➔'
       },
       {
         stepNumber: 3,
-        stepTitle: '3. Lowest Position (Parallel)',
-        imageUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '3. Deep Parallel Squat',
         postureCue: 'Hip crease drops parallel to kneecaps (90° knee angle). Pause for 1 second.',
         jointAlignment: 'Flat lower back • Chest elevated • Maximum glute and quadricep tension',
         motionDirection: 'Drive Through Heels ➔'
       },
       {
         stepNumber: 4,
-        stepTitle: '4. Return to Stand',
-        imageUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '4. Driving Up to Lockout',
         postureCue: 'Drive straight up through midfoot and heels, fully extending hips and squeezing glutes.',
         jointAlignment: 'Full hip extension • Ribs tucked down • Complete standing lockout',
         motionDirection: 'Exhale & Glute Lockout'
@@ -136,11 +133,11 @@ export const EXERCISE_GUIDE_CATALOG: ExerciseDetailItem[] = [
       'Keep dumbbells in light contact with your shins throughout the movement'
     ],
     modifications: 'Beginner: Bodyweight wall-touch hip hinges. Advanced: Single-leg Romanian deadlift.',
+    compositeImageUrl: '/exercises/rdl_guide.jpg',
     photoSequence: [
       {
         stepNumber: 1,
         stepTitle: '1. Starting Position',
-        imageUrl: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&q=80&w=600',
         postureCue: 'Stand tall with feet hip-width apart, holding dumbbells against thighs. Soft knee bend (15°).',
         jointAlignment: 'Shoulders retracted • Neutral spine • Gaze fixed 6 feet ahead',
         motionDirection: 'Inhale & Push Hips Back ➔'
@@ -148,7 +145,6 @@ export const EXERCISE_GUIDE_CATALOG: ExerciseDetailItem[] = [
       {
         stepNumber: 2,
         stepTitle: '2. Movement Into Hinge',
-        imageUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&q=80&w=600',
         postureCue: 'Push hips backward toward the wall behind you. Slide dumbbells down close along thighs.',
         jointAlignment: 'Shins remain vertical • Knees stay soft but stationary • Flat back',
         motionDirection: 'Hips Driven Back ➔'
@@ -156,7 +152,6 @@ export const EXERCISE_GUIDE_CATALOG: ExerciseDetailItem[] = [
       {
         stepNumber: 3,
         stepTitle: '3. Lowest Position (Mid-Shin)',
-        imageUrl: 'https://images.unsplash.com/photo-1534367507873-d2d7e24c797f?auto=format&fit=crop&q=80&w=600',
         postureCue: 'Weights reach mid-shin with maximum hamstring stretch. Torso is at a 45° angle.',
         jointAlignment: 'Flat neutral spine • Zero lumbar rounding • Hamstrings under full load',
         motionDirection: 'Drive Hips Forward ➔'
@@ -164,7 +159,6 @@ export const EXERCISE_GUIDE_CATALOG: ExerciseDetailItem[] = [
       {
         stepNumber: 4,
         stepTitle: '4. Return to Stand',
-        imageUrl: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&q=80&w=600',
         postureCue: 'Drive hips forward, stand tall, and squeeze glutes firmly at top lockout.',
         jointAlignment: 'Vertical posture • No backward hyperextension • Glutes contracted',
         motionDirection: 'Exhale & Squeeze Glutes'
@@ -205,35 +199,32 @@ export const EXERCISE_GUIDE_CATALOG: ExerciseDetailItem[] = [
       'Keep chin slightly tucked to prevent neck strain'
     ],
     modifications: 'Beginner: Bodyweight bridge without band; Advanced: Single-leg elevated glute bridge.',
+    compositeImageUrl: '/exercises/glute_bridge_guide.jpg',
     photoSequence: [
       {
         stepNumber: 1,
-        stepTitle: '1. Starting Position',
-        imageUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '1. Supine Setup',
         postureCue: 'Lie flat on back with knees bent 90°, feet hip-width apart on mat, arms at sides.',
         jointAlignment: 'Lower back flat on mat • Feet flat • Neck relaxed',
         motionDirection: 'Inhale & Brace Core ➔'
       },
       {
         stepNumber: 2,
-        stepTitle: '2. Movement Into Lift',
-        imageUrl: 'https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '2. Elevating Hips',
         postureCue: 'Drive through heels and push knees slightly outward against mini-band resistance.',
         jointAlignment: 'Knees aligned with feet • Core engaged • Hips ascending',
         motionDirection: 'Heel Drive Upward ➔'
       },
       {
         stepNumber: 3,
-        stepTitle: '3. Peak Glute Bridge Lockout',
-        imageUrl: 'https://images.unsplash.com/photo-1599447421416-3414500d18a5?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '3. Peak Bridge Lockout',
         postureCue: 'Lift until knees, hips, and shoulders form a straight diagonal line. Squeeze glutes for 2s.',
         jointAlignment: 'Straight diagonal alignment • Zero lumbar hyperextension • Glutes hard',
         motionDirection: 'Hold Squeeze 2s ➔'
       },
       {
         stepNumber: 4,
-        stepTitle: '4. Return to Mat',
-        imageUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '4. Controlled Lowering',
         postureCue: 'Lower hips back to the mat with control over 3 seconds before the next repetition.',
         jointAlignment: 'Controlled eccentric return • Reset core tension for next rep',
         motionDirection: 'Controlled 3s Descent'
@@ -273,35 +264,32 @@ export const EXERCISE_GUIDE_CATALOG: ExerciseDetailItem[] = [
       'If lower back aches, drop to knees for an inclined knee plank'
     ],
     modifications: 'Beginner: Incline Desk Plank or Knee Plank; Advanced: Plank with alternating shoulder taps.',
+    compositeImageUrl: '/exercises/plank_guide.jpg',
     photoSequence: [
       {
         stepNumber: 1,
-        stepTitle: '1. Starting Position',
-        imageUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '1. Kneeling Setup',
         postureCue: 'Kneel on mat and place forearms flat, parallel to each other with elbows under shoulders.',
         jointAlignment: 'Elbows 90° directly under shoulders • Palms flat on mat',
         motionDirection: 'Position Forearms ➔'
       },
       {
         stepNumber: 2,
-        stepTitle: '2. Movement Into Plank',
-        imageUrl: 'https://images.unsplash.com/photo-1566241142559-40e1dab266c6?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '2. Stepping Back',
         postureCue: 'Extend legs back onto toes, engage glutes, and tuck pelvis into posterior pelvic tilt.',
         jointAlignment: 'Tuck pelvis slightly • Squeeze glutes and quadriceps',
         motionDirection: 'Lift Knees & Lock Core ➔'
       },
       {
         stepNumber: 3,
-        stepTitle: '3. Rigid Plank Alignment',
-        imageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '3. Full Plank Hold',
         postureCue: 'Maintain straight rigid line from heels through hips to head. Breathe rhythmically for 40s.',
         jointAlignment: 'Shoulder blades broad • Neutral neck looking down • Core cylinder braced',
         motionDirection: 'Hold 35-45s with Steady Breath ➔'
       },
       {
         stepNumber: 4,
-        stepTitle: '4. Return & Rest',
-        imageUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '4. Lower With Control',
         postureCue: 'Carefully lower knees back to the mat and rest in child\'s pose for 45 seconds.',
         jointAlignment: 'Gently decompress spine • Recover diaphragmatic breathing',
         motionDirection: 'Knees to Mat & 45s Rest'
@@ -338,35 +326,32 @@ export const EXERCISE_GUIDE_CATALOG: ExerciseDetailItem[] = [
     ],
     safetyTips: ['Focus on reaching long rather than kicking high.'],
     modifications: 'Beginner: Extend only leg while keeping both hands on mat.',
+    compositeImageUrl: '/exercises/bird_dog_guide.jpg',
     photoSequence: [
       {
         stepNumber: 1,
-        stepTitle: '1. Starting Position',
-        imageUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '1. Tabletop Setup',
         postureCue: 'Tabletop position on hands and knees on mat. Hands under shoulders, knees under hips.',
         jointAlignment: 'Spine neutral • Gaze down at mat • Core braced',
         motionDirection: 'Inhale & Prepare ➔'
       },
       {
         stepNumber: 2,
-        stepTitle: '2. Movement Into Extension',
-        imageUrl: 'https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '2. Extension Initiation',
         postureCue: 'Exhale and simultaneously reach right arm forward and left leg straight back.',
         jointAlignment: 'Keep hips square to floor • Avoid sideways pelvis tilt',
         motionDirection: 'Reach Opposite Limbs ➔'
       },
       {
         stepNumber: 3,
-        stepTitle: '3. Parallel Extension Lock',
-        imageUrl: 'https://images.unsplash.com/photo-1599447421416-3414500d18a5?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '3. Full Extension Hold',
         postureCue: 'Hold horizontal parallel line from fingertips through spine to heel for 2 full seconds.',
         jointAlignment: 'Arm and leg parallel to floor • Multifidus and glute engaged',
         motionDirection: 'Hold Parallel 2s ➔'
       },
       {
         stepNumber: 4,
-        stepTitle: '4. Return to Center',
-        imageUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '4. Return to Tabletop',
         postureCue: 'Inhale and slowly lower hand and knee back to tabletop, then repeat on opposite side.',
         jointAlignment: 'Reset neutral spine • Alternate smoothly to left arm / right leg',
         motionDirection: 'Inhale & Alternate Sides'
@@ -403,35 +388,32 @@ export const EXERCISE_GUIDE_CATALOG: ExerciseDetailItem[] = [
     ],
     safetyTips: ['Keep wrists neutral throughout the pull.'],
     modifications: 'Can be performed standing with band attached to door anchor.',
+    compositeImageUrl: '/exercises/band_row_guide.jpg',
     photoSequence: [
       {
         stepNumber: 1,
-        stepTitle: '1. Starting Position',
-        imageUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '1. Seated Row Setup',
         postureCue: 'Sit tall on mat with legs extended, band securely looped around feet, arms straight.',
         jointAlignment: 'Chest lifted tall • Shoulders down away from ears • Arms extended',
         motionDirection: 'Inhale & Prepare Pull ➔'
       },
       {
         stepNumber: 2,
-        stepTitle: '2. Movement Into Row',
-        imageUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '2. Initiate Row',
         postureCue: 'Initiate row by retracting shoulder blades and driving elbows backward past ribcage.',
         jointAlignment: 'Elbows tucked close to torso • Torso stays upright without rocking',
         motionDirection: 'Drive Elbows Back ➔'
       },
       {
         stepNumber: 3,
-        stepTitle: '3. Peak Scapular Pinch',
-        imageUrl: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '3. Squeeze Back (Peak)',
         postureCue: 'Squeeze upper back blades tightly together at maximum pull for 2 full seconds.',
         jointAlignment: 'Maximum rhomboid contraction • Wrists straight • Chest proud',
         motionDirection: 'Hold Squeeze 2s ➔'
       },
       {
         stepNumber: 4,
-        stepTitle: '4. Controlled Release',
-        imageUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '4. Extend Arms (Release)',
         postureCue: 'Inhale and slowly let arms extend forward over 3 seconds under smooth band tension.',
         jointAlignment: 'Controlled eccentric return • Maintain upright posture',
         motionDirection: 'Controlled 3s Release'
@@ -465,35 +447,32 @@ export const EXERCISE_GUIDE_CATALOG: ExerciseDetailItem[] = [
     commonMistakes: ['Flaring elbows out to 90 degrees', 'Sagging hips.'],
     safetyTips: ['Use higher incline (wall) if wrist discomfort occurs.'],
     modifications: 'Beginner: Wall Push-Ups; Advanced: Floor Knee Push-Ups.',
+    compositeImageUrl: '/exercises/incline_pushup_guide.jpg',
     photoSequence: [
       {
         stepNumber: 1,
-        stepTitle: '1. Starting Position',
-        imageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '1. Incline Plank Setup',
         postureCue: 'Place hands shoulder-width on sturdy bench or countertop. Form straight diagonal plank.',
         jointAlignment: 'Body straight from heels to head • Core cylinder engaged',
         motionDirection: 'Inhale & Prepare Descent ➔'
       },
       {
         stepNumber: 2,
-        stepTitle: '2. Movement Into Descent',
-        imageUrl: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '2. 45° Elbow Descent',
         postureCue: 'Lower chest toward bench over 2-3 seconds, tucking elbows back at 45° angle.',
         jointAlignment: 'Elbows at 45° arrow shape • No flaring out • Hips rigid',
         motionDirection: '3s Controlled Lowering ➔'
       },
       {
         stepNumber: 3,
-        stepTitle: '3. Lowest Position (2" Depth)',
-        imageUrl: 'https://images.unsplash.com/photo-1566241142559-40e1dab266c6?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '3. Lowest Chest Depth',
         postureCue: 'Chest lowers within 2 inches of surface with peak stretch across pectorals.',
         jointAlignment: 'Maximum chest tension • Spine perfectly aligned • Zero hip sag',
         motionDirection: 'Press Through Palms ➔'
       },
       {
         stepNumber: 4,
-        stepTitle: '4. Return to Top Plank',
-        imageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&q=80&w=600',
+        stepTitle: '4. Push to Lockout',
         postureCue: 'Exhale forcefully and push through palms to return to top plank position.',
         jointAlignment: 'Arms fully extended • Core tight • Ready for next rep',
         motionDirection: 'Exhale & Lockout'
@@ -527,11 +506,11 @@ export const EXERCISE_GUIDE_CATALOG: ExerciseDetailItem[] = [
     commonMistakes: ['Rushing through breath cycles', 'Forcing neck into sharp extension.'],
     safetyTips: ['Move gently within a pain-free range of motion.'],
     modifications: 'Can be performed seated on a chair during desk breaks.',
+    compositeImageUrl: '/exercises/cat_cow_guide.jpg',
     photoSequence: [
       {
         stepNumber: 1,
         stepTitle: '1. Neutral Tabletop',
-        imageUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&q=80&w=600',
         postureCue: 'Start on hands and knees with flat back, hands under shoulders, knees under hips.',
         jointAlignment: 'Wrists under shoulders • Knees under hips • Spine neutral',
         motionDirection: 'Inhale & Transition to Cow ➔'
@@ -539,7 +518,6 @@ export const EXERCISE_GUIDE_CATALOG: ExerciseDetailItem[] = [
       {
         stepNumber: 2,
         stepTitle: '2. Cow Pose (Inhale & Arch)',
-        imageUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=600',
         postureCue: 'Inhale deeply through nose, drop belly gently toward mat, lift chest and gaze up.',
         jointAlignment: 'Gentle spinal extension • Abdominal wall stretches • Shoulders back',
         motionDirection: '4s Smooth Inhale ➔'
@@ -547,7 +525,6 @@ export const EXERCISE_GUIDE_CATALOG: ExerciseDetailItem[] = [
       {
         stepNumber: 3,
         stepTitle: '3. Cat Pose (Exhale & Round)',
-        imageUrl: 'https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?auto=format&fit=crop&q=80&w=600',
         postureCue: 'Exhale fully through mouth, round spine toward ceiling, tuck chin, draw navel in.',
         jointAlignment: 'Thoracic flexion • Neck relaxed down • Abdominal wall engaged',
         motionDirection: '4s Complete Exhale ➔'
@@ -555,7 +532,6 @@ export const EXERCISE_GUIDE_CATALOG: ExerciseDetailItem[] = [
       {
         stepNumber: 4,
         stepTitle: '4. Flow Wave Repeat',
-        imageUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&q=80&w=600',
         postureCue: 'Continue flowing seamlessly between Cow and Cat with rhythmic breath waves.',
         jointAlignment: 'Fluid continuous articulation • Vagus nerve activation',
         motionDirection: '8-10 Wave Cycles'
