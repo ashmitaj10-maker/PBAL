@@ -79,15 +79,27 @@ export const ProgressDashboardView: React.FC = () => {
     date: '2026-06-01'
   };
 
-  // Deltas
-  const totalWeightLoss = Number((initialMeas.weightKg - latestMeas.weightKg).toFixed(1));
-  const totalWaistReduction = Number((initialMeas.waistInches - latestMeas.waistInches).toFixed(1));
-  const totalHipReduction = Number((initialMeas.hipInches - latestMeas.hipInches).toFixed(1));
-  const totalArmReduction = Number((initialMeas.armInches - latestMeas.armInches).toFixed(1));
-  const totalFatLoss = Number(((initialMeas.bodyFatPercentage || 30) - (latestMeas.bodyFatPercentage || 26)).toFixed(1));
+  // Deltas (safely calculated only when measurements exist)
+  const totalWeightLoss = (initialMeas.weightKg !== undefined && latestMeas.weightKg !== undefined)
+    ? Number((initialMeas.weightKg - latestMeas.weightKg).toFixed(1))
+    : null;
+  const totalWaistReduction = (initialMeas.waistInches !== undefined && latestMeas.waistInches !== undefined)
+    ? Number((initialMeas.waistInches - latestMeas.waistInches).toFixed(1))
+    : null;
+  const totalHipReduction = (initialMeas.hipInches !== undefined && latestMeas.hipInches !== undefined)
+    ? Number((initialMeas.hipInches - latestMeas.hipInches).toFixed(1))
+    : null;
+  const totalArmReduction = (initialMeas.armInches !== undefined && latestMeas.armInches !== undefined)
+    ? Number((initialMeas.armInches - latestMeas.armInches).toFixed(1))
+    : null;
+  const totalFatLoss = (initialMeas.bodyFatPercentage !== undefined && latestMeas.bodyFatPercentage !== undefined)
+    ? Number((initialMeas.bodyFatPercentage - latestMeas.bodyFatPercentage).toFixed(1))
+    : null;
 
-  const waistToHipRatio = Number((latestMeas.waistInches / (latestMeas.hipInches || 1)).toFixed(2));
-  const isOptimalWHR = waistToHipRatio <= (currentPatient?.gender === 'female' ? 0.80 : 0.90);
+  const waistToHipRatio = (latestMeas.waistInches !== undefined && latestMeas.hipInches !== undefined && latestMeas.hipInches > 0)
+    ? Number((latestMeas.waistInches / latestMeas.hipInches).toFixed(2))
+    : null;
+  const isOptimalWHR = waistToHipRatio !== null && waistToHipRatio <= (currentPatient?.gender === 'female' ? 0.80 : 0.90);
 
   // SVG Chart Calculation Helpers
   const chartData = filteredMeasurements.length > 0 ? filteredMeasurements : [initialMeas, latestMeas];
@@ -193,11 +205,18 @@ export const ProgressDashboardView: React.FC = () => {
             <span className="text-xs font-semibold">Current Weight</span>
             <Scale className="w-4 h-4 text-teal-600" />
           </div>
-          <div className="text-2xl font-black text-slate-900">{latestMeas.weightKg} <span className="text-xs font-normal text-slate-500">kg</span></div>
-          <div className="flex items-center gap-1 text-xs font-bold text-emerald-600 mt-1">
-            <ArrowDownRight className="w-3.5 h-3.5" />
-            -{totalWeightLoss} kg net
+          <div className="text-2xl font-black text-slate-900">
+            {latestMeas.weightKg !== undefined ? latestMeas.weightKg : '—'} 
+            {latestMeas.weightKg !== undefined && <span className="text-xs font-normal text-slate-500"> kg</span>}
           </div>
+          {totalWeightLoss !== null ? (
+            <div className="flex items-center gap-1 text-xs font-bold text-emerald-600 mt-1">
+              <ArrowDownRight className="w-3.5 h-3.5" />
+              {totalWeightLoss > 0 ? `-${totalWeightLoss} kg net` : `${totalWeightLoss} kg`}
+            </div>
+          ) : (
+            <div className="text-xs text-slate-400 mt-1 font-medium">Logged entry</div>
+          )}
         </div>
 
         {/* Waist Card */}
@@ -206,11 +225,18 @@ export const ProgressDashboardView: React.FC = () => {
             <span className="text-xs font-semibold">Waistline</span>
             <Ruler className="w-4 h-4 text-amber-600" />
           </div>
-          <div className="text-2xl font-black text-slate-900">{latestMeas.waistInches}&quot; <span className="text-xs font-normal text-slate-500">({Math.round(latestMeas.waistInches * 2.54)} cm)</span></div>
-          <div className="flex items-center gap-1 text-xs font-bold text-emerald-600 mt-1">
-            <ArrowDownRight className="w-3.5 h-3.5" />
-            -{totalWaistReduction}&quot; lost
+          <div className="text-2xl font-black text-slate-900">
+            {latestMeas.waistInches !== undefined ? `${latestMeas.waistInches}"` : '—'} 
+            {latestMeas.waistInches !== undefined && <span className="text-xs font-normal text-slate-500"> ({Math.round(latestMeas.waistInches * 2.54)} cm)</span>}
           </div>
+          {totalWaistReduction !== null ? (
+            <div className="flex items-center gap-1 text-xs font-bold text-emerald-600 mt-1">
+              <ArrowDownRight className="w-3.5 h-3.5" />
+              {totalWaistReduction > 0 ? `-${totalWaistReduction}" lost` : `${totalWaistReduction}"`}
+            </div>
+          ) : (
+            <div className="text-xs text-slate-400 mt-1 font-medium">Optional metric</div>
+          )}
         </div>
 
         {/* Hip Card */}
@@ -219,11 +245,18 @@ export const ProgressDashboardView: React.FC = () => {
             <span className="text-xs font-semibold">Hip Width</span>
             <Ruler className="w-4 h-4 text-blue-600" />
           </div>
-          <div className="text-2xl font-black text-slate-900">{latestMeas.hipInches}&quot; <span className="text-xs font-normal text-slate-500">({Math.round(latestMeas.hipInches * 2.54)} cm)</span></div>
-          <div className="flex items-center gap-1 text-xs font-bold text-emerald-600 mt-1">
-            <ArrowDownRight className="w-3.5 h-3.5" />
-            -{totalHipReduction}&quot; lost
+          <div className="text-2xl font-black text-slate-900">
+            {latestMeas.hipInches !== undefined ? `${latestMeas.hipInches}"` : '—'} 
+            {latestMeas.hipInches !== undefined && <span className="text-xs font-normal text-slate-500"> ({Math.round(latestMeas.hipInches * 2.54)} cm)</span>}
           </div>
+          {totalHipReduction !== null ? (
+            <div className="flex items-center gap-1 text-xs font-bold text-emerald-600 mt-1">
+              <ArrowDownRight className="w-3.5 h-3.5" />
+              {totalHipReduction > 0 ? `-${totalHipReduction}" lost` : `${totalHipReduction}"`}
+            </div>
+          ) : (
+            <div className="text-xs text-slate-400 mt-1 font-medium">Optional metric</div>
+          )}
         </div>
 
         {/* BMI Card */}
@@ -232,9 +265,12 @@ export const ProgressDashboardView: React.FC = () => {
             <span className="text-xs font-semibold">Clinical BMI</span>
             <Activity className="w-4 h-4 text-teal-600" />
           </div>
-          <div className="text-2xl font-black text-slate-900">{latestMeas.bmi} <span className="text-xs font-normal text-slate-500">kg/m²</span></div>
+          <div className="text-2xl font-black text-slate-900">
+            {latestMeas.bmi !== undefined ? latestMeas.bmi : '—'} 
+            {latestMeas.bmi !== undefined && <span className="text-xs font-normal text-slate-500"> kg/m²</span>}
+          </div>
           <div className="text-xs font-semibold text-slate-500 mt-1">
-            Start: {initialMeas.bmi} kg/m²
+            {initialMeas.bmi !== undefined ? `Start: ${initialMeas.bmi} kg/m²` : 'Calculated when Wt/Ht entered'}
           </div>
         </div>
 
@@ -244,11 +280,17 @@ export const ProgressDashboardView: React.FC = () => {
             <span className="text-xs font-semibold">Arm / Bicep</span>
             <Ruler className="w-4 h-4 text-purple-600" />
           </div>
-          <div className="text-2xl font-black text-slate-900">{latestMeas.armInches}&quot;</div>
-          <div className="flex items-center gap-1 text-xs font-bold text-emerald-600 mt-1">
-            <ArrowDownRight className="w-3.5 h-3.5" />
-            -{totalArmReduction}&quot; toned
+          <div className="text-2xl font-black text-slate-900">
+            {latestMeas.armInches !== undefined ? `${latestMeas.armInches}"` : '—'}
           </div>
+          {totalArmReduction !== null ? (
+            <div className="flex items-center gap-1 text-xs font-bold text-emerald-600 mt-1">
+              <ArrowDownRight className="w-3.5 h-3.5" />
+              {totalArmReduction > 0 ? `-${totalArmReduction}" toned` : `${totalArmReduction}"`}
+            </div>
+          ) : (
+            <div className="text-xs text-slate-400 mt-1 font-medium">Optional metric</div>
+          )}
         </div>
 
         {/* Body Fat % */}
@@ -257,11 +299,17 @@ export const ProgressDashboardView: React.FC = () => {
             <span className="text-xs font-semibold">Body Fat %</span>
             <Sparkles className="w-4 h-4 text-teal-600" />
           </div>
-          <div className="text-2xl font-black text-slate-900">{latestMeas.bodyFatPercentage || 26}%</div>
-          <div className="flex items-center gap-1 text-xs font-bold text-emerald-600 mt-1">
-            <ArrowDownRight className="w-3.5 h-3.5" />
-            -{totalFatLoss}% fat
+          <div className="text-2xl font-black text-slate-900">
+            {latestMeas.bodyFatPercentage !== undefined ? `${latestMeas.bodyFatPercentage}%` : '—'}
           </div>
+          {totalFatLoss !== null ? (
+            <div className="flex items-center gap-1 text-xs font-bold text-emerald-600 mt-1">
+              <ArrowDownRight className="w-3.5 h-3.5" />
+              {totalFatLoss > 0 ? `-${totalFatLoss}% fat` : `${totalFatLoss}%`}
+            </div>
+          ) : (
+            <div className="text-xs text-slate-400 mt-1 font-medium">Optional metric</div>
+          )}
         </div>
 
       </div>
@@ -630,25 +678,27 @@ export const ProgressDashboardView: React.FC = () => {
             <tbody className="divide-y divide-slate-100">
               {(measurements || []).map((m, idx) => {
                 const prev = (measurements || [])[idx - 1];
-                const weightDiff = prev ? (m.weightKg - prev.weightKg).toFixed(1) : '0';
+                const weightDiff = (prev && prev.weightKg !== undefined && m.weightKg !== undefined) 
+                  ? (m.weightKg - prev.weightKg).toFixed(1) 
+                  : null;
                 return (
                   <tr key={m.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{m.date}</td>
                     <td className="px-4 py-3 font-bold text-slate-900 whitespace-nowrap">
-                      {m.weightKg} kg
-                      {Number(weightDiff) !== 0 && (
+                      {m.weightKg !== undefined ? `${m.weightKg} kg` : '—'}
+                      {weightDiff !== null && Number(weightDiff) !== 0 && (
                         <span className={`ml-1.5 text-[10px] font-bold ${Number(weightDiff) < 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                           ({Number(weightDiff) > 0 ? `+${weightDiff}` : weightDiff})
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-slate-700 font-mono">{m.bmi}</td>
-                    <td className="px-4 py-3 text-slate-800 font-semibold">{m.waistInches}&quot; ({Math.round(m.waistInches * 2.54)}cm)</td>
-                    <td className="px-4 py-3 text-slate-800">{m.hipInches}&quot;</td>
-                    <td className="px-4 py-3 text-slate-600">{m.chestInches ? `${m.chestInches}"` : '—'}</td>
-                    <td className="px-4 py-3 text-slate-600">{m.armInches ? `${m.armInches}"` : '—'}</td>
-                    <td className="px-4 py-3 text-slate-600">{m.bodyFatPercentage ? `${m.bodyFatPercentage}%` : '—'}</td>
-                    <td className="px-4 py-3 text-slate-500 max-w-xs truncate">{m.notes || 'Routine follow-up assessment.'}</td>
+                    <td className="px-4 py-3 text-slate-700 font-mono">{m.bmi !== undefined ? m.bmi : '—'}</td>
+                    <td className="px-4 py-3 text-slate-800 font-semibold">{m.waistInches !== undefined ? `${m.waistInches}" (${Math.round(m.waistInches * 2.54)}cm)` : '—'}</td>
+                    <td className="px-4 py-3 text-slate-800">{m.hipInches !== undefined ? `${m.hipInches}"` : '—'}</td>
+                    <td className="px-4 py-3 text-slate-600">{m.chestInches !== undefined ? `${m.chestInches}"` : '—'}</td>
+                    <td className="px-4 py-3 text-slate-600">{m.armInches !== undefined ? `${m.armInches}"` : '—'}</td>
+                    <td className="px-4 py-3 text-slate-600">{m.bodyFatPercentage !== undefined ? `${m.bodyFatPercentage}%` : '—'}</td>
+                    <td className="px-4 py-3 text-slate-500 max-w-xs truncate">{m.notes || 'Routine follow-up entry.'}</td>
                   </tr>
                 );
               })}

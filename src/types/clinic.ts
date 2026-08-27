@@ -442,16 +442,23 @@ export interface BodyMeasurementsRecord {
   id: string;
   patientId: string;
   date: string; // YYYY-MM-DD
-  weightKg: number;
-  bmi: number;
-  waistInches: number;
-  hipInches: number;
-  chestInches: number;
-  armInches: number;
-  thighInches?: number;
+  weightKg?: number;
+  heightCm?: number;
+  bmi?: number;
   bodyFatPercentage?: number;
+  muscleMassKg?: number;
+  visceralFat?: number;
+  waterPercentage?: number;
+  boneMassKg?: number;
+  waistInches?: number;
+  waistCm?: number;
+  hipInches?: number;
+  chestInches?: number;
+  armInches?: number;
+  thighInches?: number;
+  calfInches?: number;
   notes?: string;
-  loggedBy: 'patient' | 'doctor' | 'dietitian';
+  loggedBy?: 'patient' | 'doctor' | 'dietitian' | string;
 }
 
 export type PhotoAngle = 'front' | 'side' | 'back';

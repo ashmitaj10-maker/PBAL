@@ -99,11 +99,14 @@ export function calculateRecommendedMacros(
 /**
  * Calculates BMI and categorical classification
  */
-export function calculateBmi(weightKg: number, heightCm: number): {
+export function calculateBmi(weightKg?: number, heightCm?: number): {
   bmi: number;
-  category: 'Underweight' | 'Optimal Health' | 'Overweight' | 'Obesity Class I' | 'Obesity Class II+';
+  category: 'Underweight' | 'Optimal Health' | 'Overweight' | 'Obesity Class I' | 'Obesity Class II+' | 'Not Recorded';
   color: string;
 } {
+  if (!weightKg || !heightCm || weightKg <= 0 || heightCm <= 0) {
+    return { bmi: 0, category: 'Not Recorded', color: '#94A3B8' };
+  }
   const heightMeters = heightCm / 100;
   const bmi = Number((weightKg / (heightMeters * heightMeters)).toFixed(1));
 

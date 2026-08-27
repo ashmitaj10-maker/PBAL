@@ -1809,26 +1809,26 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   // Phase 3: Body Circumference Measurements
   const addBodyMeasurement = (record: Omit<BodyMeasurementsRecord, 'id'>): BodyMeasurementsRecord => {
     const pat = allPatients.find(p => p.id === record.patientId);
-    const heightM = pat ? pat.heightCm / 100 : 1.65;
-    const bmi = Number((record.weightKg / (heightM * heightM)).toFixed(1));
+    const heightM = (record.heightCm || pat?.heightCm) ? ((record.heightCm || pat!.heightCm) / 100) : undefined;
+    const bmi = (record.weightKg !== undefined && heightM) ? Number((record.weightKg / (heightM * heightM)).toFixed(1)) : record.bmi;
     const newRecord: BodyMeasurementsRecord = {
       ...record,
       id: `meas-${Date.now()}`,
-      bmi: record.bmi || bmi
+      bmi
     };
 
     setAllBodyMeasurements(prev => [newRecord, ...prev]);
 
-    // Also update patient current weight and add to weight history
-    if (pat) {
+    // Also update patient current weight and add to weight history if weight was provided
+    if (pat && record.weightKg !== undefined) {
       updatePatient(pat.id, { currentWeightKg: record.weightKg });
       addWeightRecord({
         patientId: pat.id,
         weightKg: record.weightKg,
         date: record.date,
-        waistCm: Math.round(record.waistInches * 2.54),
+        waistCm: record.waistCm || (record.waistInches ? Math.round(record.waistInches * 2.54) : undefined),
         bodyFatPercentage: record.bodyFatPercentage,
-        notes: record.notes ? `Circumference log: ${record.notes}` : `Logged waist ${record.waistInches}"`
+        notes: record.notes ? `Circumference log: ${record.notes}` : (record.waistInches ? `Logged waist ${record.waistInches}"` : undefined)
       });
     }
 

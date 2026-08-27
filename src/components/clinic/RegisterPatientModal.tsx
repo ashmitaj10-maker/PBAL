@@ -186,7 +186,7 @@ export const RegisterPatientModal: React.FC = () => {
 
   const getHeightError = (): string | null => {
     const trimmed = String(heightCm).trim();
-    if (!trimmed) return 'Height is required and must be a number in cm.';
+    if (!trimmed) return null; // Optional
     if (!/^\d+(\.\d+)?$/.test(trimmed)) return 'Height must contain only numbers in cm (e.g. 165 or 172.5).';
     const num = Number(trimmed);
     if (isNaN(num) || num < 40 || num > 280) return 'Height must be a valid number between 40 cm and 280 cm.';
@@ -195,7 +195,7 @@ export const RegisterPatientModal: React.FC = () => {
 
   const getWeightError = (): string | null => {
     const trimmed = String(weightKg).trim();
-    if (!trimmed) return 'Current weight is required and must be a number in kg.';
+    if (!trimmed) return null; // Optional
     if (!/^\d+(\.\d+)?$/.test(trimmed)) return 'Weight must contain only numbers in kg (e.g. 70 or 68.5).';
     const num = Number(trimmed);
     if (isNaN(num) || num < 15 || num > 350) return 'Weight must be a valid number between 15 kg and 350 kg.';
@@ -336,8 +336,8 @@ export const RegisterPatientModal: React.FC = () => {
       email: email.trim(),
       age: Number(age),
       gender: gender as any,
-      heightCm: Number(heightCm),
-      weightKg: Number(weightKg),
+      heightCm: heightCm.trim() !== '' ? Number(heightCm) : 165,
+      weightKg: weightKg.trim() !== '' ? Number(weightKg) : 65,
       targetWeightKg: targetWeightKg.trim() !== '' ? Number(targetWeightKg) : undefined,
       bodyType: bodyType || 'Medium Frame',
       primaryGoals: selectedGoals.length > 0 ? selectedGoals : ['Metabolic Optimization', 'General Wellness'],
@@ -599,7 +599,7 @@ export const RegisterPatientModal: React.FC = () => {
           <div>
             <div className="flex items-center justify-between pb-1 mb-2.5 border-b border-slate-100">
               <h3 className="text-xs font-bold text-[#183153] uppercase tracking-wider">
-                2. Physical Metrics & Body Composition *
+                2. Physical Metrics & Body Composition (Optional)
               </h3>
               {bmiCalc && (
                 <span className="text-[11px] font-bold" style={{ color: bmiCalc.color }}>
@@ -611,7 +611,7 @@ export const RegisterPatientModal: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
-                  <span>Height (cm) *</span>
+                  <span>Height (cm) <span className="text-slate-400 font-normal">(Optional)</span></span>
                   {(touched.height || hasAttemptedSubmit) && heightError && (
                     <span className="text-[10px] text-rose-600 font-bold">Number in cm</span>
                   )}
@@ -642,7 +642,7 @@ export const RegisterPatientModal: React.FC = () => {
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
-                  <span>Current Weight (kg) *</span>
+                  <span>Current Weight (kg) <span className="text-slate-400 font-normal">(Optional)</span></span>
                   {(touched.weight || hasAttemptedSubmit) && weightError && (
                     <span className="text-[10px] text-rose-600 font-bold">Number in kg</span>
                   )}
