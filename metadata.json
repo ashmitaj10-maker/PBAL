@@ -1,0 +1,6 @@
+{
+  "name": "Perfect Body & Life",
+  "description": "AI-Powered Clinical & Lifestyle Nutrition Management Platform for personalized macro/micronutrient tracking, AI meal analysis, metabolic health diagnostics, and clinical diet planning.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

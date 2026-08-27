@@ -1,0 +1,1683 @@
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { 
+  Clinic, 
+  User, 
+  Patient, 
+  WeightRecord, 
+  ClinicPlan, 
+  PaymentRecord, 
+  Invoice, 
+  ClinicActivity, 
+  UserRole, 
+  PaymentMode, 
+  PaymentStatus, 
+  FoodPreference, 
+  PatientStatus,
+  PatientAssessment,
+  ClinicalMealPlan,
+  ExercisePlan,
+  RecipeDetail,
+  MealOption,
+  PatientDailyLog,
+  BodyMeasurementsRecord,
+  ProgressPhoto,
+  PhotoAngle,
+  PhotoStage,
+  PatientReminderConfig,
+  ChatMessage,
+  ChatConversationSummary,
+  FoodSwapSuggestion,
+  NutrientGapAnalysis,
+  GoalDistributionStat,
+  WeightUpdateDueItem,
+  ExpiringPlanItem
+} from '../types/clinic';
+import { 
+  INITIAL_CLINICS, 
+  INITIAL_USERS, 
+  INITIAL_PLANS, 
+  INITIAL_PATIENTS, 
+  INITIAL_WEIGHT_HISTORY, 
+  INITIAL_PAYMENTS, 
+  INITIAL_INVOICES, 
+  INITIAL_ACTIVITIES 
+} from '../data/mockClinicData';
+import { 
+  INITIAL_ASSESSMENTS, 
+  INITIAL_CLINICAL_MEAL_PLANS, 
+  INITIAL_EXERCISE_PLANS, 
+  INITIAL_PATIENT_LOGS,
+  RECIPE_CATALOG 
+} from '../data/mockMealAndAssessmentData';
+import {
+  INITIAL_BODY_MEASUREMENTS,
+  INITIAL_PROGRESS_PHOTOS,
+  generateInitialRemindersForPatient,
+  INITIAL_CHAT_MESSAGES,
+  FOOD_SWAPS_CATALOG,
+  NUTRIENT_GAP_TEMPLATES,
+  MOCK_GOAL_DISTRIBUTION,
+  MOCK_WEIGHT_UPDATES_DUE,
+  MOCK_EXPIRING_PLANS
+} from '../data/mockEngagementData';
+import { calculateBmi } from '../utils/nutritionCalculators';
+
+export type ClinicScreen = 
+  | 'login'
+  | 'dashboard' 
+  | 'patients' 
+  | 'patient_profile' 
+  | 'assessment' 
+  | 'ai_meal_builder' 
+  | 'exercise_planner' 
+  | 'patient_portal' 
+  | 'payments' 
+  | 'invoice_preview'
+  | 'progress_dashboard'
+  | 'progress_photos'
+  | 'reminders'
+  | 'reminder_settings'
+  | 'chat'
+  | 'patient_chat'
+  | 'ai_copilot';
+
+interface RegisterPatientInput {
+  name: string;
+  mobile: string;
+  email: string;
+  age: number | string;
+  gender: 'female' | 'male' | 'other' | string;
+  heightCm: number | string;
+  weightKg: number | string;
+  targetWeightKg?: number | string;
+  bodyType?: string;
+  primaryGoals: string[];
+  medicalConditions: string[];
+  foodPreference: FoodPreference | string;
+  allergies: string[];
+  assignedPlanId?: string;
+  assignedDoctorId?: string;
+  notes?: string;
+  // Lifestyle & Clinical Assessment fields
+  wakeTime?: string;
+  sleepTime?: string;
+  workHours?: string;
+  dailyWaterLiters?: number | string;
+  physicalActivityLevel?: string;
+  exerciseHabits?: string;
+  stressLevel?: 'low' | 'moderate' | 'high' | 'severe' | string;
+  digestiveIssues?: string[];
+  dietaryRestrictions?: string[];
+  favoriteFoods?: string[];
+  dislikedFoods?: string[];
+  medications?: string[];
+  supplements?: string[];
+  consultationNotes?: string;
+  voiceAudioUrl?: string;
+  voiceAudioDuration?: number;
+  voiceAudioDate?: string;
+  voiceTranscript?: string;
+}
+
+interface RecordPaymentInput {
+  patientId: string;
+  planId: string;
+  basePrice: number;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  taxRate: number;
+  paidAmount: number;
+  paymentMode: PaymentMode;
+  transactionRef?: string;
+  paymentDate: string;
+  dueDate: string;
+  notes?: string;
+}
+
+export interface ToastAlert {
+  id: string;
+  title: string;
+  message: string;
+  channel: 'push' | 'whatsapp' | 'sms';
+  time: string;
+}
+
+interface ClinicContextType {
+  // Navigation & Auth
+  activeScreen: ClinicScreen;
+  navigateTo: (screen: ClinicScreen, options?: { patientId?: string; invoiceId?: string; planId?: string }) => void;
+  isAuthenticated: boolean;
+  authToken: string | null;
+  currentUser: User | null;
+  currentClinic: Clinic | null;
+  clinics: Clinic[];
+  users: User[];
+  
+  // Auth actions
+  loginWithPassword: (email: string, password: string, clinicId: string) => Promise<{ success: boolean; error?: string }>;
+  requestOtp: (identifier: string) => Promise<{ success: boolean; mockOtp: string }>;
+  verifyOtp: (identifier: string, otp: string, clinicId: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => void;
+  switchClinic: (clinicId: string) => void;
+  switchUserRole: (role: UserRole) => void;
+
+  // Selected Entities
+  selectedPatientId: string | null;
+  setSelectedPatientId: (id: string | null) => void;
+  selectedPatient: Patient | null;
+  selectedInvoiceId: string | null;
+  setSelectedInvoiceId: (id: string | null) => void;
+  selectedInvoice: Invoice | null;
+  selectedMealPlanId: string | null;
+  setSelectedMealPlanId: (id: string | null) => void;
+
+  // Data Collections (Scoped to current clinic)
+  patients: Patient[];
+  weightRecords: WeightRecord[];
+  plans: ClinicPlan[];
+  payments: PaymentRecord[];
+  invoices: Invoice[];
+  activities: ClinicActivity[];
+  assessments: PatientAssessment[];
+  clinicalMealPlans: ClinicalMealPlan[];
+  exercisePlans: ExercisePlan[];
+  patientLogs: Record<string, PatientDailyLog>;
+
+  // Patient CRUD
+  registerPatient: (input: RegisterPatientInput) => Patient;
+  updatePatient: (id: string, updates: Partial<Patient>) => void;
+  deletePatient: (id: string) => void;
+
+  // Weight History
+  getPatientWeightHistory: (patientId: string) => WeightRecord[];
+  addWeightRecord: (params: { patientId: string; weightKg: number; date?: string; notes?: string; waistCm?: number; bodyFatPercentage?: number }) => WeightRecord;
+  deleteWeightRecord: (id: string) => void;
+
+  // Plans & Financials
+  createPlan: (plan: Omit<ClinicPlan, 'id' | 'clinicId'>) => ClinicPlan;
+  addPlan: (plan: Omit<ClinicPlan, 'id' | 'clinicId'>) => ClinicPlan;
+  updatePlan: (id: string, updates: Partial<ClinicPlan>) => void;
+  editPlan: (id: string, updates: Partial<ClinicPlan>) => void;
+  archivePlan: (id: string) => void;
+  unarchivePlan: (id: string) => void;
+  deletePlan: (id: string) => void;
+  recordPayment: (input: RecordPaymentInput) => { payment: PaymentRecord; invoice: Invoice };
+  markInvoicePaid: (invoiceId: string, paymentMode?: PaymentMode, transactionRef?: string) => void;
+
+  // Phase 2: Patient Assessment Methods
+  saveAssessment: (assessment: PatientAssessment) => void;
+  getPatientAssessments: (patientId: string) => PatientAssessment[];
+  getLatestAssessment: (patientId: string) => PatientAssessment | null;
+
+  // Phase 2: AI Clinical Meal Plans Methods
+  saveMealPlan: (plan: ClinicalMealPlan) => void;
+  publishMealPlan: (planId: string) => void;
+  getPatientMealPlans: (patientId: string) => ClinicalMealPlan[];
+  getActiveMealPlan: (patientId: string) => ClinicalMealPlan | null;
+
+  // Phase 2: Exercise Planner Methods
+  saveExercisePlan: (plan: ExercisePlan) => void;
+  publishExercisePlan: (planId: string) => void;
+  getPatientExercisePlan: (patientId: string) => ExercisePlan | null;
+
+  // Phase 2: Recipe Modal & Details
+  selectedRecipe: RecipeDetail | null;
+  isRecipeModalOpen: boolean;
+  openRecipeModal: (recipeOrOption: RecipeDetail | MealOption | string) => void;
+  closeRecipeModal: () => void;
+
+  // Phase 2: Patient Mobile App Tracking
+  updatePatientDailyLog: (patientId: string, updates: Partial<PatientDailyLog>) => void;
+  getPatientDailyLog: (patientId: string) => PatientDailyLog;
+
+  // Phase 3: Body Circumference Measurements
+  bodyMeasurements: BodyMeasurementsRecord[];
+  addBodyMeasurement: (record: Omit<BodyMeasurementsRecord, 'id'>) => BodyMeasurementsRecord;
+  getPatientMeasurements: (patientId: string) => BodyMeasurementsRecord[];
+
+  // Phase 3: Progress Photos
+  progressPhotos: ProgressPhoto[];
+  addProgressPhoto: (photo: Omit<ProgressPhoto, 'id'>) => ProgressPhoto;
+  deleteProgressPhoto: (id: string) => void;
+  getPatientPhotos: (patientId: string, angle?: PhotoAngle, stage?: PhotoStage) => ProgressPhoto[];
+
+  // Phase 3: Patient Reminder System
+  getPatientReminders: (patientId: string) => PatientReminderConfig[];
+  updatePatientReminder: (patientId: string, reminderId: string, updates: Partial<PatientReminderConfig>) => void;
+  toggleReminderChannel: (patientId: string, reminderId: string, channel: 'push' | 'whatsapp' | 'sms') => void;
+  triggerTestReminderNotification: (reminder: PatientReminderConfig, channel: 'push' | 'whatsapp' | 'sms') => void;
+  activeToastNotification: ToastAlert | null;
+  dismissToastNotification: () => void;
+
+  // Phase 3: WhatsApp-Style Clinical Chat
+  chatMessages: ChatMessage[];
+  sendChatMessage: (input: { 
+    patientId: string; 
+    content: string; 
+    type?: 'text' | 'photo' | 'pdf' | 'meal_plan' | 'exercise_plan'; 
+    sender?: 'doctor' | 'patient'; 
+    mediaUrl?: string; 
+    mediaMeta?: any 
+  }) => ChatMessage;
+  markChatAsRead: (patientId: string) => void;
+  getPatientChatMessages: (patientId: string) => ChatMessage[];
+  getUnreadChatCount: (patientId?: string) => number;
+  getAllConversationsSummary: () => ChatConversationSummary[];
+
+  // Phase 3: AI Copilot & Engagement Data
+  foodSwapsCatalog: FoodSwapSuggestion[];
+  nutrientGapsTemplates: NutrientGapAnalysis[];
+  goalDistributionStats: GoalDistributionStat[];
+  weightUpdatesDueList: WeightUpdateDueItem[];
+  expiringPlansList: ExpiringPlanItem[];
+  generateCopilotMotivation: (patientId: string, tone?: 'celebratory' | 'empathetic' | 'strict_discipline') => string;
+  generateCopilotProgressSummary: (patientId: string) => string;
+  generateCopilotFoodSwap: (cravingText: string) => FoodSwapSuggestion | null;
+
+  // Modals state
+  isRegisterModalOpen: boolean;
+  setIsRegisterModalOpen: (open: boolean) => void;
+  isPaymentModalOpen: boolean;
+  setIsPaymentModalOpen: (open: boolean) => void;
+  isWeightModalOpen: boolean;
+  setIsWeightModalOpen: (open: boolean) => void;
+  isCreatePlanModalOpen: boolean;
+  setIsCreatePlanModalOpen: (open: boolean) => void;
+  editingPlan: ClinicPlan | null;
+  setEditingPlan: (plan: ClinicPlan | null) => void;
+  openPlanModal: (plan?: ClinicPlan) => void;
+  closePlanModal: () => void;
+  isMeasurementModalOpen: boolean;
+  setIsMeasurementModalOpen: (open: boolean) => void;
+  isPhotoModalOpen: boolean;
+  setIsPhotoModalOpen: (open: boolean) => void;
+
+  // KPIs calculation helpers
+  getDashboardKpis: () => {
+    activePatients: number;
+    totalPatients: number;
+    monthlyRevenue: number;
+    totalRevenue: number;
+    pendingPaymentsAmount: number;
+    pendingInvoicesCount: number;
+    renewalsDueCount: number;
+    avgWeightLossKg: number;
+    activeMealPlansCount: number;
+    unreadChatCount: number;
+    dueWeighInsCount: number;
+    expiringPlansCount: number;
+  };
+}
+
+const ClinicContext = createContext<ClinicContextType | undefined>(undefined);
+
+const STORAGE_KEYS = {
+  AUTH: 'pbl_clinic_auth_v2',
+  CLINICS: 'pbl_clinics_v2',
+  USERS: 'pbl_clinic_users_v2',
+  PATIENTS: 'pbl_clinic_patients_v2',
+  WEIGHT: 'pbl_clinic_weight_v2',
+  PLANS: 'pbl_clinic_plans_v2',
+  PAYMENTS: 'pbl_clinic_payments_v2',
+  INVOICES: 'pbl_clinic_invoices_v2',
+  ACTIVITIES: 'pbl_clinic_activities_v2',
+  ASSESSMENTS: 'pbl_clinic_assessments_v2',
+  MEAL_PLANS: 'pbl_clinic_meal_plans_v2',
+  EXERCISE_PLANS: 'pbl_clinic_exercise_plans_v2',
+  PATIENT_LOGS: 'pbl_clinic_patient_logs_v2',
+  MEASUREMENTS: 'pbl_clinic_measurements_v3',
+  PHOTOS: 'pbl_clinic_photos_v3',
+  REMINDERS: 'pbl_clinic_reminders_v3',
+  CHATS: 'pbl_clinic_chats_v3'
+};
+
+export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Load initial states or fallback to mock data
+  const [clinics] = useState<Clinic[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.CLINICS);
+    return saved ? JSON.parse(saved) : INITIAL_CLINICS;
+  });
+
+  const [users] = useState<User[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.USERS);
+    return saved ? JSON.parse(saved) : INITIAL_USERS;
+  });
+
+  const [selectedClinicId, setSelectedClinicId] = useState<string>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.AUTH);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.clinicId) return parsed.clinicId;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return INITIAL_CLINICS[0].id;
+  });
+
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.AUTH);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.userId) {
+          const u = INITIAL_USERS.find(user => user.id === parsed.userId);
+          if (u) return u;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return INITIAL_USERS[0];
+  });
+
+  const [authToken, setAuthToken] = useState<string | null>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.AUTH);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed?.token || null;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3ItMSIsInJvbGUiOiJkb2N0b3IiLCJleHAiOjE3OTk5OTk5OTl9.demo_valid_jwt_token';
+  });
+
+  const [activeScreen, setActiveScreen] = useState<ClinicScreen>('dashboard');
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>('pat-1');
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>('inv-101');
+  const [selectedMealPlanId, setSelectedMealPlanId] = useState<string | null>('plan-cl-101');
+
+  // Modals
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isWeightModalOpen, setIsWeightModalOpen] = useState(false);
+  const [isCreatePlanModalOpen, setIsCreatePlanModalOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<ClinicPlan | null>(null);
+  const [isMeasurementModalOpen, setIsMeasurementModalOpen] = useState(false);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+
+  const openPlanModal = (plan?: ClinicPlan) => {
+    setEditingPlan(plan || null);
+    setIsCreatePlanModalOpen(true);
+  };
+
+  const closePlanModal = () => {
+    setEditingPlan(null);
+    setIsCreatePlanModalOpen(false);
+  };
+
+  // Phase 2 Recipe Modal
+  const [isRecipeModalOpen, setIsRecipeModalOpen] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<RecipeDetail | null>(null);
+
+  // Phase 3 Toast Simulation
+  const [activeToastNotification, setActiveToastNotification] = useState<ToastAlert | null>(null);
+
+  // Collections
+  const [allPatients, setAllPatients] = useState<Patient[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.PATIENTS);
+    return saved ? JSON.parse(saved) : INITIAL_PATIENTS;
+  });
+
+  const [allWeightRecords, setAllWeightRecords] = useState<WeightRecord[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.WEIGHT);
+    return saved ? JSON.parse(saved) : INITIAL_WEIGHT_HISTORY;
+  });
+
+  const [allPlans, setAllPlans] = useState<ClinicPlan[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.PLANS);
+    return saved ? JSON.parse(saved) : INITIAL_PLANS;
+  });
+
+  const [allPayments, setAllPayments] = useState<PaymentRecord[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.PAYMENTS);
+    return saved ? JSON.parse(saved) : INITIAL_PAYMENTS;
+  });
+
+  const [allInvoices, setAllInvoices] = useState<Invoice[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.INVOICES);
+    return saved ? JSON.parse(saved) : INITIAL_INVOICES;
+  });
+
+  const [allActivities, setAllActivities] = useState<ClinicActivity[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.ACTIVITIES);
+    return saved ? JSON.parse(saved) : INITIAL_ACTIVITIES;
+  });
+
+  // Phase 2 Collections
+  const [allAssessments, setAllAssessments] = useState<PatientAssessment[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.ASSESSMENTS);
+    return saved ? JSON.parse(saved) : INITIAL_ASSESSMENTS;
+  });
+
+  const [allClinicalMealPlans, setAllClinicalMealPlans] = useState<ClinicalMealPlan[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.MEAL_PLANS);
+    return saved ? JSON.parse(saved) : INITIAL_CLINICAL_MEAL_PLANS;
+  });
+
+  const [allExercisePlans, setAllExercisePlans] = useState<ExercisePlan[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.EXERCISE_PLANS);
+    return saved ? JSON.parse(saved) : INITIAL_EXERCISE_PLANS;
+  });
+
+  const [allPatientLogs, setAllPatientLogs] = useState<Record<string, PatientDailyLog>>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.PATIENT_LOGS);
+    return saved ? JSON.parse(saved) : INITIAL_PATIENT_LOGS;
+  });
+
+  // Phase 3 Collections
+  const [allBodyMeasurements, setAllBodyMeasurements] = useState<BodyMeasurementsRecord[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.MEASUREMENTS);
+    return saved ? JSON.parse(saved) : INITIAL_BODY_MEASUREMENTS;
+  });
+
+  const [allProgressPhotos, setAllProgressPhotos] = useState<ProgressPhoto[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.PHOTOS);
+    return saved ? JSON.parse(saved) : INITIAL_PROGRESS_PHOTOS;
+  });
+
+  const [allReminders, setAllReminders] = useState<Record<string, PatientReminderConfig[]>>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.REMINDERS);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    const initReminders: Record<string, PatientReminderConfig[]> = {};
+    INITIAL_PATIENTS.forEach(p => {
+      initReminders[p.id] = generateInitialRemindersForPatient(p.id);
+    });
+    return initReminders;
+  });
+
+  const [allChatMessages, setAllChatMessages] = useState<ChatMessage[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.CHATS);
+    const rawList: ChatMessage[] = saved ? JSON.parse(saved) : INITIAL_CHAT_MESSAGES;
+    const baseTime = Date.now() - (rawList.length * 60000);
+    return rawList.map((m, idx) => ({
+      ...m,
+      createdAt: m.createdAt || (baseTime + idx * 60000)
+    }));
+  });
+
+  // Save changes to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.PATIENTS, JSON.stringify(allPatients));
+  }, [allPatients]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.WEIGHT, JSON.stringify(allWeightRecords));
+  }, [allWeightRecords]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.PLANS, JSON.stringify(allPlans));
+  }, [allPlans]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(allPayments));
+  }, [allPayments]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.INVOICES, JSON.stringify(allInvoices));
+  }, [allInvoices]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(allActivities));
+  }, [allActivities]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.ASSESSMENTS, JSON.stringify(allAssessments));
+  }, [allAssessments]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.MEAL_PLANS, JSON.stringify(allClinicalMealPlans));
+  }, [allClinicalMealPlans]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.EXERCISE_PLANS, JSON.stringify(allExercisePlans));
+  }, [allExercisePlans]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.PATIENT_LOGS, JSON.stringify(allPatientLogs));
+  }, [allPatientLogs]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.MEASUREMENTS, JSON.stringify(allBodyMeasurements));
+  }, [allBodyMeasurements]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.PHOTOS, JSON.stringify(allProgressPhotos));
+  }, [allProgressPhotos]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.REMINDERS, JSON.stringify(allReminders));
+  }, [allReminders]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.CHATS, JSON.stringify(allChatMessages));
+  }, [allChatMessages]);
+
+  const currentClinic = clinics.find(c => c.id === selectedClinicId) || clinics[0];
+
+  // Scoped collections
+  const patients = allPatients.filter(p => p.clinicId === currentClinic.id);
+  const weightRecords = allWeightRecords;
+  const plans = allPlans.filter(p => p.clinicId === currentClinic.id || p.clinicId === 'clinic-1');
+  const payments = allPayments.filter(p => p.clinicId === currentClinic.id);
+  const invoices = allInvoices.filter(i => i.clinicId === currentClinic.id);
+  const activities = allActivities.filter(a => a.clinicId === currentClinic.id);
+  const assessments = allAssessments;
+  const clinicalMealPlans = allClinicalMealPlans.filter(p => p.clinicId === currentClinic.id);
+  const exercisePlans = allExercisePlans.filter(p => p.clinicId === currentClinic.id);
+
+  const selectedPatient = allPatients.find(p => p.id === selectedPatientId) || null;
+  const selectedInvoice = allInvoices.find(i => i.id === selectedInvoiceId) || null;
+
+  const navigateTo = (screen: ClinicScreen, options?: { patientId?: string; invoiceId?: string; planId?: string }) => {
+    if (options?.patientId) {
+      setSelectedPatientId(options.patientId);
+    }
+    if (options?.invoiceId) {
+      setSelectedInvoiceId(options.invoiceId);
+    }
+    if (options?.planId) {
+      setSelectedMealPlanId(options.planId);
+    }
+    setActiveScreen(screen);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Auth Operations
+  const loginWithPassword = async (email: string, _password: string, clinicId: string) => {
+    const inputEmail = (email || '').toLowerCase().trim();
+    const user = users.find(u => (u.email || '').toLowerCase() === inputEmail) || users[0];
+    const mockToken = `jwt_token_${Date.now()}_${user.id}`;
+    setCurrentUser(user);
+    setSelectedClinicId(clinicId || user.clinicId);
+    setAuthToken(mockToken);
+    localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify({
+      token: mockToken,
+      userId: user.id,
+      clinicId: clinicId || user.clinicId
+    }));
+    setActiveScreen('dashboard');
+    return { success: true };
+  };
+
+  const requestOtp = async (_identifier: string) => {
+    return { success: true, mockOtp: '849201' };
+  };
+
+  const verifyOtp = async (identifier: string, otp: string, clinicId: string) => {
+    if (otp !== '849201' && otp.length !== 6) {
+      return { success: false, error: 'Invalid OTP. Enter 849201 for test verification.' };
+    }
+    const inputId = (identifier || '').toLowerCase().trim();
+    const user = users.find(u => (u.email || '').toLowerCase() === inputId || (u.mobile || '').includes(inputId)) || users[0];
+    const mockToken = `jwt_otp_token_${Date.now()}_${user.id}`;
+    setCurrentUser(user);
+    setSelectedClinicId(clinicId || user.clinicId);
+    setAuthToken(mockToken);
+    localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify({
+      token: mockToken,
+      userId: user.id,
+      clinicId: clinicId || user.clinicId
+    }));
+    setActiveScreen('dashboard');
+    return { success: true };
+  };
+
+  const logout = () => {
+    setCurrentUser(null);
+    setAuthToken(null);
+    localStorage.removeItem(STORAGE_KEYS.AUTH);
+    setActiveScreen('login');
+  };
+
+  const switchClinic = (clinicId: string) => {
+    const cl = clinics.find(c => c.id === clinicId);
+    if (cl) {
+      setSelectedClinicId(clinicId);
+      const newAct: ClinicActivity = {
+        id: `act-${Date.now()}`,
+        clinicId,
+        type: 'patient_registered',
+        title: 'Clinic Switched',
+        description: `Switched operational context to ${cl.name}`,
+        timestamp: 'Just now',
+        user: currentUser?.name || 'Doctor'
+      };
+      setAllActivities(prev => [newAct, ...prev]);
+    }
+  };
+
+  const switchUserRole = (role: UserRole) => {
+    const matchingUser = users.find(u => u.role === role) || users[0];
+    setCurrentUser(matchingUser);
+  };
+
+  // Patient Actions
+  const registerPatient = (input: RegisterPatientInput): Patient => {
+    const nextCodeNumber = 1000 + allPatients.length + 1;
+    const patientCode = `PBL-${nextCodeNumber}`;
+    const id = `pat-${Date.now()}`;
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    const renewalDate = new Date();
+    renewalDate.setMonth(renewalDate.getMonth() + 3);
+    const renewalStr = renewalDate.toISOString().split('T')[0];
+
+    const plan = allPlans.find(p => p.id === input.assignedPlanId);
+
+    const newPatient: Patient = {
+      id,
+      clinicId: currentClinic.id,
+      patientCode,
+      name: input.name,
+      mobile: input.mobile,
+      email: input.email,
+      age: Number(input.age) || 0,
+      gender: (input.gender as any) || 'female',
+      heightCm: Number(input.heightCm) || 0,
+      currentWeightKg: Number(input.weightKg) || 0,
+      startingWeightKg: Number(input.weightKg) || 0,
+      targetWeightKg: input.targetWeightKg ? Number(input.targetWeightKg) : undefined,
+      bodyType: input.bodyType || 'Medium Frame',
+      primaryGoals: input.primaryGoals?.filter(Boolean) || [],
+      medicalConditions: input.medicalConditions?.filter(Boolean) || [],
+      foodPreference: (input.foodPreference as FoodPreference) || 'Vegetarian',
+      allergies: input.allergies?.filter(Boolean) || [],
+      assignedDoctorId: input.assignedDoctorId || currentUser?.id || 'usr-1',
+      assignedPlanId: input.assignedPlanId,
+      assignedPlanName: plan?.name || 'Clinical Nutrition Protocol',
+      status: 'active',
+      joiningDate: todayStr,
+      renewalDate: renewalStr,
+      notes: input.consultationNotes || input.notes || 'Intake registered.',
+      consultationNotes: input.consultationNotes || input.notes,
+      voiceAudioUrl: input.voiceAudioUrl,
+      voiceAudioDuration: input.voiceAudioDuration,
+      voiceAudioDate: input.voiceAudioDate || (input.voiceAudioUrl ? new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : undefined),
+      voiceTranscript: input.voiceTranscript
+    };
+
+    setAllPatients(prev => [newPatient, ...prev]);
+
+    // Initial weight log
+    if (input.weightKg && input.heightCm) {
+      const bmiResult = calculateBmi(Number(input.weightKg), Number(input.heightCm));
+      const initialWeight: WeightRecord = {
+        id: `w-${Date.now()}`,
+        patientId: id,
+        date: todayStr,
+        weightKg: Number(input.weightKg),
+        bmi: bmiResult.bmi,
+        notes: 'Baseline intake weight.',
+        loggedBy: currentUser?.name || 'Doctor'
+      };
+      setAllWeightRecords(prev => [initialWeight, ...prev]);
+    }
+
+    // Create Initial Comprehensive Baseline Assessment (Single Editable Assessment)
+    const initialAssessment: PatientAssessment = {
+      id: `asmt-${Date.now()}`,
+      patientId: id,
+      version: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      doctorId: currentUser?.id || 'usr-1',
+      doctorName: currentUser?.name || 'Dr. Ashmita Joshi, MD, RD',
+      wakeTime: input.wakeTime || '06:30',
+      sleepTime: input.sleepTime || '22:30',
+      workHours: input.workHours || '09:00 - 18:00',
+      dailyWaterLiters: input.dailyWaterLiters ? Number(input.dailyWaterLiters) : 2.5,
+      physicalActivityLevel: input.physicalActivityLevel || 'Light Active',
+      exerciseHabits: input.exerciseHabits || 'Brisk Walking & Light Activity',
+      stressLevel: (input.stressLevel as any) || 'moderate',
+      digestiveIssues: input.digestiveIssues || [],
+      dietaryRestrictions: input.dietaryRestrictions || [],
+      favoriteFoods: input.favoriteFoods || [],
+      dislikedFoods: input.dislikedFoods || input.allergies || [],
+      medicalHistory: input.medicalConditions || [],
+      medications: input.medications || [],
+      supplements: input.supplements || [],
+      foodPreference: (input.foodPreference as FoodPreference) || 'Vegetarian',
+      targetCalories: 1550,
+      targetProteinGrams: 90,
+      targetCarbsGrams: 145,
+      targetFatGrams: 45,
+      targetFiberGrams: 35,
+      clinicalNotes: input.consultationNotes || input.notes || `Initial clinical assessment for ${newPatient.name}. Primary health goals: ${(newPatient.primaryGoals || []).join(', ') || 'Metabolic Optimization'}.`,
+      consultationNotes: input.consultationNotes || input.notes,
+      voiceAudioUrl: input.voiceAudioUrl,
+      voiceAudioDuration: input.voiceAudioDuration,
+      voiceAudioDate: input.voiceAudioDate || (input.voiceAudioUrl ? new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : undefined),
+      voiceTranscript: input.voiceTranscript
+    };
+    setAllAssessments(prev => [initialAssessment, ...prev]);
+
+    // Log Activity
+    const act: ClinicActivity = {
+      id: `act-${Date.now()}`,
+      clinicId: currentClinic.id,
+      type: 'patient_registered',
+      title: 'New Patient Registered',
+      description: `${newPatient.name} (${patientCode}) onboarded with baseline ${newPatient.currentWeightKg} kg.`,
+      timestamp: 'Just now',
+      patientId: id,
+      patientName: newPatient.name,
+      user: currentUser?.name || 'Doctor'
+    };
+    setAllActivities(prev => [act, ...prev]);
+
+    return newPatient;
+  };
+
+  const updatePatient = (id: string, updates: Partial<Patient>) => {
+    setAllPatients(prev => prev.map(p => (p.id === id ? { ...p, ...updates } : p)));
+  };
+
+  const deletePatient = (id: string) => {
+    setAllPatients(prev => prev.filter(p => p.id !== id));
+    if (selectedPatientId === id) {
+      setSelectedPatientId(allPatients.find(p => p.id !== id)?.id || null);
+    }
+  };
+
+  // Weight History Actions
+  const getPatientWeightHistory = (patientId: string): WeightRecord[] => {
+    return allWeightRecords
+      .filter(w => w.patientId === patientId)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  };
+
+  const addWeightRecord = (params: {
+    patientId: string;
+    weightKg: number;
+    date?: string;
+    notes?: string;
+    waistCm?: number;
+    bodyFatPercentage?: number;
+  }): WeightRecord => {
+    const patient = allPatients.find(p => p.id === params.patientId);
+    const height = patient ? patient.heightCm : 170;
+    const bmiResult = calculateBmi(params.weightKg, height);
+    const date = params.date || new Date().toISOString().split('T')[0];
+
+    const newRecord: WeightRecord = {
+      id: `w-${Date.now()}`,
+      patientId: params.patientId,
+      date,
+      weightKg: Number(params.weightKg),
+      bmi: bmiResult.bmi,
+      notes: params.notes || 'Routine clinical weigh-in.',
+      waistCm: params.waistCm,
+      bodyFatPercentage: params.bodyFatPercentage,
+      loggedBy: currentUser?.name || 'Doctor'
+    };
+
+    setAllWeightRecords(prev => [...prev, newRecord]);
+
+    if (patient) {
+      const weightDiff = Number((patient.startingWeightKg - params.weightKg).toFixed(1));
+      updatePatient(params.patientId, { currentWeightKg: params.weightKg });
+
+      const act: ClinicActivity = {
+        id: `act-${Date.now()}`,
+        clinicId: currentClinic.id,
+        type: 'weight_logged',
+        title: 'Weight Logged',
+        description: `${patient.name} weighed ${params.weightKg} kg (${weightDiff > 0 ? `${weightDiff} kg total lost` : 'stable'}).`,
+        timestamp: 'Just now',
+        patientId: patient.id,
+        patientName: patient.name,
+        user: currentUser?.name || 'Doctor'
+      };
+      setAllActivities(prev => [act, ...prev]);
+    }
+
+    return newRecord;
+  };
+
+  const deleteWeightRecord = (id: string) => {
+    setAllWeightRecords(prev => prev.filter(w => w.id !== id));
+  };
+
+  // Plan Actions
+  const createPlan = (input: Omit<ClinicPlan, 'id' | 'clinicId'>): ClinicPlan => {
+    const newPlan: ClinicPlan = {
+      ...input,
+      id: `plan-${Date.now()}`,
+      clinicId: currentClinic.id,
+      isActive: true,
+      isArchived: false
+    };
+    setAllPlans(prev => [...prev, newPlan]);
+    return newPlan;
+  };
+
+  const addPlan = (input: Omit<ClinicPlan, 'id' | 'clinicId'>): ClinicPlan => {
+    return createPlan(input);
+  };
+
+  const updatePlan = (id: string, updates: Partial<ClinicPlan>) => {
+    setAllPlans(prev => prev.map(pl => pl.id === id ? { ...pl, ...updates } : pl));
+  };
+
+  const editPlan = (id: string, updates: Partial<ClinicPlan>) => {
+    updatePlan(id, updates);
+  };
+
+  const archivePlan = (id: string) => {
+    setAllPlans(prev => prev.map(pl => pl.id === id ? { ...pl, isArchived: true, isActive: false } : pl));
+  };
+
+  const unarchivePlan = (id: string) => {
+    setAllPlans(prev => prev.map(pl => pl.id === id ? { ...pl, isArchived: false, isActive: true } : pl));
+  };
+
+  const deletePlan = (id: string) => {
+    setAllPlans(prev => prev.filter(pl => pl.id !== id));
+  };
+
+  // Payments and Invoices
+  const recordPayment = (input: RecordPaymentInput): { payment: PaymentRecord; invoice: Invoice } => {
+    const patient = allPatients.find(p => p.id === input.patientId);
+    const plan = allPlans.find(p => p.id === input.planId);
+
+    const discountAmount = input.discountType === 'percentage' 
+      ? Number(((input.basePrice * input.discountValue) / 100).toFixed(2))
+      : Number(input.discountValue);
+
+    const taxableAmount = Math.max(0, input.basePrice - discountAmount);
+    const taxAmount = Number(((taxableAmount * input.taxRate) / 100).toFixed(2));
+    const totalAmount = Number((taxableAmount + taxAmount).toFixed(2));
+    const paidAmount = Number(input.paidAmount);
+    const pendingBalance = Math.max(0, Number((totalAmount - paidAmount).toFixed(2)));
+
+    let status: PaymentStatus = 'paid';
+    if (paidAmount === 0) status = 'pending';
+    else if (pendingBalance > 0) status = 'partial';
+
+    const paymentId = `pay-${Date.now()}`;
+    const invoiceId = `inv-${Date.now()}`;
+    const invoiceNumber = `INV-${new Date().getFullYear()}-${String(allInvoices.length + 88).padStart(4, '0')}`;
+    const todayStr = input.paymentDate || new Date().toISOString().split('T')[0];
+
+    const payment: PaymentRecord = {
+      id: paymentId,
+      invoiceId,
+      clinicId: currentClinic.id,
+      patientId: input.patientId,
+      patientName: patient?.name || 'Patient',
+      planId: input.planId,
+      planName: plan?.name || 'Clinical Nutrition Plan',
+      basePrice: input.basePrice,
+      discountType: input.discountType,
+      discountValue: input.discountValue,
+      discountAmount,
+      taxRate: input.taxRate,
+      taxAmount,
+      totalAmount,
+      paidAmount,
+      pendingBalance,
+      paymentMode: input.paymentMode,
+      transactionRef: input.transactionRef || `TXN-${Date.now().toString().slice(-6)}`,
+      status,
+      paymentDate: todayStr,
+      dueDate: input.dueDate || todayStr,
+      notes: input.notes,
+      collectedBy: currentUser?.name || 'Clinic Desk'
+    };
+
+    const invoice: Invoice = {
+      id: invoiceId,
+      invoiceNumber,
+      clinicId: currentClinic.id,
+      patientId: input.patientId,
+      patientName: patient?.name || 'Patient',
+      patientMobile: patient?.mobile || '',
+      patientEmail: patient?.email || '',
+      paymentId,
+      issueDate: todayStr,
+      dueDate: input.dueDate || todayStr,
+      items: [
+        {
+          id: `item-${Date.now()}`,
+          description: `${plan?.name || 'Clinical Nutrition Protocol'} — Medical Nutrition Therapy & Body Composition`,
+          duration: `${plan?.durationDays || 30} Days Active Care`,
+          quantity: 1,
+          unitPrice: input.basePrice,
+          total: input.basePrice
+        }
+      ],
+      subtotal: input.basePrice,
+      discountAmount,
+      taxableAmount,
+      taxRate: input.taxRate,
+      taxAmount,
+      grandTotal: totalAmount,
+      amountPaid: paidAmount,
+      balanceDue: pendingBalance,
+      status,
+      paymentMode: input.paymentMode,
+      transactionRef: payment.transactionRef,
+      notes: input.notes || 'Thank you for choosing Perfect Body & Life Clinic.',
+      doctorName: currentUser?.name || 'Dr. Ashmita Joshi, MD, RD',
+      doctorLicense: currentUser?.licenseNumber || 'MCI-REG-84920/MAH'
+    };
+
+    setAllPayments(prev => [payment, ...prev]);
+    setAllInvoices(prev => [invoice, ...prev]);
+
+    if (patient && plan) {
+      updatePatient(patient.id, {
+        assignedPlanId: plan.id,
+        assignedPlanName: plan.name,
+        status: 'active'
+      });
+    }
+
+    const act: ClinicActivity = {
+      id: `act-${Date.now()}`,
+      clinicId: currentClinic.id,
+      type: 'payment_received',
+      title: 'Payment Collected',
+      description: `Collected ${currentClinic.currencySymbol}${(paidAmount || 0).toLocaleString()} (${status}) for ${payment.planName} - ${payment.patientName}.`,
+      timestamp: 'Just now',
+      patientId: patient?.id,
+      patientName: payment.patientName,
+      amount: paidAmount,
+      user: currentUser?.name || 'Clinic Desk'
+    };
+    setAllActivities(prev => [act, ...prev]);
+
+    return { payment, invoice };
+  };
+
+  const markInvoicePaid = (invoiceId: string, paymentMode: PaymentMode = 'upi', transactionRef?: string) => {
+    const inv = allInvoices.find(i => i.id === invoiceId);
+    if (!inv) return;
+
+    const remaining = inv.balanceDue;
+    const newPaid = inv.grandTotal;
+
+    setAllInvoices(prev => prev.map(i => {
+      if (i.id === invoiceId) {
+        return {
+          ...i,
+          amountPaid: newPaid,
+          balanceDue: 0,
+          status: 'paid',
+          paymentMode,
+          transactionRef: transactionRef || `TXN-REC-${Date.now().toString().slice(-6)}`
+        };
+      }
+      return i;
+    }));
+
+    setAllPayments(prev => prev.map(p => {
+      if (p.invoiceId === invoiceId) {
+        return {
+          ...p,
+          paidAmount: newPaid,
+          pendingBalance: 0,
+          status: 'paid',
+          paymentMode,
+          transactionRef: transactionRef || p.transactionRef
+        };
+      }
+      return p;
+    }));
+
+    const act: ClinicActivity = {
+      id: `act-${Date.now()}`,
+      clinicId: currentClinic.id,
+      type: 'payment_received',
+      title: 'Invoice Cleared',
+      description: `Received balance ${currentClinic.currencySymbol}${(remaining || 0).toLocaleString()} on ${inv.invoiceNumber}.`,
+      timestamp: 'Just now',
+      patientId: inv.patientId,
+      patientName: inv.patientName,
+      amount: remaining,
+      user: currentUser?.name || 'Doctor'
+    };
+    setAllActivities(prev => [act, ...prev]);
+  };
+
+  // Phase 2: Assessment Methods
+  const saveAssessment = (assessment: PatientAssessment) => {
+    setAllAssessments(prev => {
+      const exists = prev.some(a => a.id === assessment.id);
+      if (exists) {
+        return prev.map(a => a.id === assessment.id ? { ...assessment, updatedAt: new Date().toISOString() } : a);
+      }
+      return [assessment, ...prev];
+    });
+
+    const pat = allPatients.find(p => p.id === assessment.patientId);
+    const act: ClinicActivity = {
+      id: `act-${Date.now()}`,
+      clinicId: currentClinic.id,
+      type: 'patient_registered',
+      title: 'Assessment Recorded (v' + assessment.version + ')',
+      description: `Clinical assessment updated for ${pat?.name || 'Patient'} (Version ${assessment.version}).`,
+      timestamp: 'Just now',
+      patientId: assessment.patientId,
+      patientName: pat?.name,
+      user: currentUser?.name || 'Doctor'
+    };
+    setAllActivities(prev => [act, ...prev]);
+  };
+
+  const getPatientAssessments = (patientId: string): PatientAssessment[] => {
+    return allAssessments
+      .filter(a => a.patientId === patientId)
+      .sort((a, b) => b.version - a.version);
+  };
+
+  const getLatestAssessment = (patientId: string): PatientAssessment | null => {
+    const list = getPatientAssessments(patientId);
+    return list[0] || null;
+  };
+
+  // Phase 2: AI Clinical Meal Plan Methods
+  const saveMealPlan = (plan: ClinicalMealPlan) => {
+    setAllClinicalMealPlans(prev => {
+      const exists = prev.some(p => p.id === plan.id);
+      if (exists) {
+        return prev.map(p => p.id === plan.id ? plan : p);
+      }
+      return [plan, ...prev];
+    });
+    setSelectedMealPlanId(plan.id);
+  };
+
+  const publishMealPlan = (planId: string) => {
+    setAllClinicalMealPlans(prev => prev.map(p => {
+      if (p.id === planId) {
+        return {
+          ...p,
+          status: 'published',
+          publishedAt: new Date().toISOString(),
+          changeLog: [...(p.changeLog || []), `Published to patient app on ${new Date().toLocaleDateString()}`]
+        };
+      }
+      return p;
+    }));
+
+    const targetPlan = allClinicalMealPlans.find(p => p.id === planId);
+    if (targetPlan) {
+      const act: ClinicActivity = {
+        id: `act-${Date.now()}`,
+        clinicId: currentClinic.id,
+        type: 'plan_renewed',
+        title: 'AI Meal Plan Published',
+        description: `Plan "${targetPlan.title}" published live for ${targetPlan.patientName}.`,
+        timestamp: 'Just now',
+        patientId: targetPlan.patientId,
+        patientName: targetPlan.patientName,
+        user: currentUser?.name || 'Doctor'
+      };
+      setAllActivities(prev => [act, ...prev]);
+    }
+  };
+
+  const getPatientMealPlans = (patientId: string): ClinicalMealPlan[] => {
+    return allClinicalMealPlans
+      .filter(p => p.patientId === patientId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  };
+
+  const getActiveMealPlan = (patientId: string): ClinicalMealPlan | null => {
+    const plans = getPatientMealPlans(patientId);
+    // Find published or latest draft
+    return plans.find(p => p.status === 'published') || plans[0] || null;
+  };
+
+  // Phase 2: Exercise Plan Methods
+  const saveExercisePlan = (plan: ExercisePlan) => {
+    setAllExercisePlans(prev => {
+      const exists = prev.some(p => p.id === plan.id);
+      if (exists) {
+        return prev.map(p => p.id === plan.id ? plan : p);
+      }
+      return [plan, ...prev];
+    });
+  };
+
+  const publishExercisePlan = (planId: string) => {
+    setAllExercisePlans(prev => prev.map(p => {
+      if (p.id === planId) {
+        return {
+          ...p,
+          status: 'published',
+          publishedAt: new Date().toISOString()
+        };
+      }
+      return p;
+    }));
+  };
+
+  const getPatientExercisePlan = (patientId: string): ExercisePlan | null => {
+    return allExercisePlans.find(p => p.patientId === patientId) || INITIAL_EXERCISE_PLANS[0] || null;
+  };
+
+  // Phase 2: Recipe Modal
+  const openRecipeModal = (recipeOrOption: RecipeDetail | MealOption | string) => {
+    if (typeof recipeOrOption === 'string') {
+      const found = RECIPE_CATALOG[recipeOrOption];
+      if (found) {
+        setSelectedRecipe(found);
+      } else {
+        // Fallback default recipe
+        setSelectedRecipe(Object.values(RECIPE_CATALOG)[0]);
+      }
+    } else if ('servings' in recipeOrOption) {
+      // RecipeDetail
+      setSelectedRecipe(recipeOrOption);
+    } else {
+      // MealOption to RecipeDetail conversion
+      const mo = recipeOrOption as MealOption;
+      const catalogMatch = RECIPE_CATALOG[mo.id];
+      if (catalogMatch) {
+        setSelectedRecipe(catalogMatch);
+      } else {
+        setSelectedRecipe({
+          id: mo.id,
+          name: mo.name,
+          category: 'Clinical Protocol',
+          slotType: mo.slotType,
+          prepTimeMinutes: mo.prepTimeMinutes || 8,
+          cookTimeMinutes: 10,
+          servings: 1,
+          servingSizeDescription: mo.portion,
+          calories: mo.calories,
+          protein: mo.protein,
+          carbs: mo.carbs,
+          fat: mo.fat,
+          fiber: mo.fiber,
+          micronutrients: mo.micronutrients || {
+            vitaminC: 35,
+            calcium: 20,
+            iron: 18,
+            magnesium: 25,
+            potassium: 22
+          },
+          ingredients: (mo.ingredients || ['Fresh ingredients']).map(i => ({ item: i, amount: '1 serving' })),
+          steps: mo.instructions?.length ? mo.instructions : [
+            'Assemble fresh clinical ingredients as instructed.',
+            'Steam or pan-sear with healthy cold-pressed oil.',
+            'Serve warm and enjoy mindfully.'
+          ],
+          dietaryTags: [mo.glycemicIndex + ' GI', 'Clinical Nutrition'],
+          chefTip: 'Eat mindfully and chew thoroughly for optimal enzymatic digestion.',
+          clinicalBenefit: mo.clinicalBenefit || 'Formulated for metabolic stabilization.',
+          imageUrl: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&q=80&w=600'
+        });
+      }
+    }
+    setIsRecipeModalOpen(true);
+  };
+
+  const closeRecipeModal = () => {
+    setIsRecipeModalOpen(false);
+    setSelectedRecipe(null);
+  };
+
+  // Phase 2: Patient Daily Logs
+  const updatePatientDailyLog = (patientId: string, updates: Partial<PatientDailyLog>) => {
+    setAllPatientLogs(prev => {
+      const existing = prev[patientId] || {
+        date: new Date().toISOString().split('T')[0],
+        waterGlassesDrank: 4,
+        waterGoalGlasses: 8,
+        mealsStatus: {},
+        exercisesCompleted: []
+      };
+      return {
+        ...prev,
+        [patientId]: {
+          ...existing,
+          ...updates,
+          mealsStatus: {
+            ...existing.mealsStatus,
+            ...(updates.mealsStatus || {})
+          }
+        }
+      };
+    });
+  };
+
+  const getPatientDailyLog = (patientId: string): PatientDailyLog => {
+    return allPatientLogs[patientId] || {
+      date: new Date().toISOString().split('T')[0],
+      waterGlassesDrank: 4,
+      waterGoalGlasses: 8,
+      mealsStatus: {},
+      exercisesCompleted: []
+    };
+  };
+
+  // Phase 3: Body Circumference Measurements
+  const addBodyMeasurement = (record: Omit<BodyMeasurementsRecord, 'id'>): BodyMeasurementsRecord => {
+    const pat = allPatients.find(p => p.id === record.patientId);
+    const heightM = pat ? pat.heightCm / 100 : 1.65;
+    const bmi = Number((record.weightKg / (heightM * heightM)).toFixed(1));
+    const newRecord: BodyMeasurementsRecord = {
+      ...record,
+      id: `meas-${Date.now()}`,
+      bmi: record.bmi || bmi
+    };
+
+    setAllBodyMeasurements(prev => [newRecord, ...prev]);
+
+    // Also update patient current weight and add to weight history
+    if (pat) {
+      updatePatient(pat.id, { currentWeightKg: record.weightKg });
+      addWeightRecord({
+        patientId: pat.id,
+        weightKg: record.weightKg,
+        date: record.date,
+        waistCm: Math.round(record.waistInches * 2.54),
+        bodyFatPercentage: record.bodyFatPercentage,
+        notes: record.notes ? `Circumference log: ${record.notes}` : `Logged waist ${record.waistInches}"`
+      });
+    }
+
+    return newRecord;
+  };
+
+  const getPatientMeasurements = (patientId: string): BodyMeasurementsRecord[] => {
+    return allBodyMeasurements
+      .filter(m => m.patientId === patientId)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  };
+
+  // Phase 3: Progress Photos
+  const addProgressPhoto = (photo: Omit<ProgressPhoto, 'id'>): ProgressPhoto => {
+    const newPhoto: ProgressPhoto = {
+      ...photo,
+      id: `photo-${Date.now()}`
+    };
+    setAllProgressPhotos(prev => [newPhoto, ...prev]);
+    return newPhoto;
+  };
+
+  const deleteProgressPhoto = (id: string) => {
+    setAllProgressPhotos(prev => prev.filter(p => p.id !== id));
+  };
+
+  const getPatientPhotos = (patientId: string, angle?: PhotoAngle, stage?: PhotoStage): ProgressPhoto[] => {
+    return allProgressPhotos.filter(p => {
+      if (p.patientId !== patientId) return false;
+      if (angle && p.angle !== angle) return false;
+      if (stage && p.stage !== stage) return false;
+      return true;
+    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  };
+
+  // Phase 3: Reminders System
+  const getPatientReminders = (patientId: string): PatientReminderConfig[] => {
+    if (allReminders[patientId] && allReminders[patientId].length > 0) {
+      return allReminders[patientId];
+    }
+    const generated = generateInitialRemindersForPatient(patientId);
+    setAllReminders(prev => ({ ...prev, [patientId]: generated }));
+    return generated;
+  };
+
+  const updatePatientReminder = (patientId: string, reminderId: string, updates: Partial<PatientReminderConfig>) => {
+    setAllReminders(prev => {
+      const currentList = prev[patientId] || generateInitialRemindersForPatient(patientId);
+      const updatedList = currentList.map(r => r.id === reminderId ? { ...r, ...updates } : r);
+      return { ...prev, [patientId]: updatedList };
+    });
+  };
+
+  const toggleReminderChannel = (patientId: string, reminderId: string, channel: 'push' | 'whatsapp' | 'sms') => {
+    setAllReminders(prev => {
+      const currentList = prev[patientId] || generateInitialRemindersForPatient(patientId);
+      const updatedList = currentList.map(r => {
+        if (r.id === reminderId) {
+          return {
+            ...r,
+            channels: {
+              ...r.channels,
+              [channel]: !r.channels[channel]
+            }
+          };
+        }
+        return r;
+      });
+      return { ...prev, [patientId]: updatedList };
+    });
+  };
+
+  const triggerTestReminderNotification = (reminder: PatientReminderConfig, channel: 'push' | 'whatsapp' | 'sms') => {
+    const pat = allPatients.find(p => p.id === reminder.patientId);
+    const channelNames = { push: '📱 Push Notification', whatsapp: '💬 WhatsApp Message', sms: '✉️ SMS Alert' };
+    
+    setActiveToastNotification({
+      id: `alert-${Date.now()}`,
+      title: `${channelNames[channel]}: ${reminder.title}`,
+      message: reminder.customMessage.replace('{name}', pat?.name ? pat.name.split(' ')[0] : 'Patient'),
+      channel,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    });
+  };
+
+  const dismissToastNotification = () => {
+    setActiveToastNotification(null);
+  };
+
+  // Phase 3: WhatsApp Chat
+  const sendChatMessage = (input: { 
+    patientId: string; 
+    content: string; 
+    type?: 'text' | 'photo' | 'pdf' | 'meal_plan' | 'exercise_plan'; 
+    sender?: 'doctor' | 'patient'; 
+    mediaUrl?: string; 
+    mediaMeta?: any 
+  }): ChatMessage => {
+    const sender = input.sender || 'doctor';
+    const targetPatient = allPatients.find(p => p.id === input.patientId) || selectedPatient;
+    const senderName = sender === 'doctor' 
+      ? (currentUser?.name || 'Dr. Ashmita Joshi') 
+      : (targetPatient?.name || 'Patient');
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateStr = now.toISOString().split('T')[0];
+    const nowMs = Date.now();
+
+    const newMsg: ChatMessage = {
+      id: `msg-${nowMs}-${Math.random().toString(36).substring(2, 7)}`,
+      patientId: input.patientId,
+      clinicId: currentClinic.id,
+      sender,
+      senderName,
+      senderRole: sender === 'doctor' ? (currentUser?.roleTitle || 'Clinical Dietitian') : undefined,
+      timestamp: `Today, ${timeStr}`,
+      date: dateStr,
+      createdAt: nowMs,
+      content: input.content,
+      type: input.type || 'text',
+      mediaUrl: input.mediaUrl,
+      mediaMeta: input.mediaMeta,
+      isRead: sender === 'doctor', // Marked unread if from patient for clinician notification
+      status: 'delivered'
+    };
+
+    setAllChatMessages(prev => [...prev, newMsg]);
+    return newMsg;
+  };
+
+  const markChatAsRead = (patientId: string) => {
+    setAllChatMessages(prev => prev.map(m => {
+      if (m.patientId === patientId && !m.isRead) {
+        return { ...m, isRead: true, status: 'read' };
+      }
+      return m;
+    }));
+  };
+
+  const getPatientChatMessages = (patientId: string): ChatMessage[] => {
+    return allChatMessages
+      .filter(m => m.patientId === patientId)
+      .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  };
+
+  const getUnreadChatCount = (patientId?: string): number => {
+    if (patientId) {
+      return allChatMessages.filter(m => m.patientId === patientId && m.sender === 'patient' && !m.isRead).length;
+    }
+    return allChatMessages.filter(m => m.sender === 'patient' && !m.isRead).length;
+  };
+
+  const getAllConversationsSummary = (): ChatConversationSummary[] => {
+    return patients.map(pat => {
+      const patientMsgs = allChatMessages
+        .filter(m => m.patientId === pat.id)
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      const lastMsg = patientMsgs[patientMsgs.length - 1];
+      const unreadCount = patientMsgs.filter(m => m.sender === 'patient' && !m.isRead).length;
+      return {
+        patientId: pat.id,
+        patientName: pat.name,
+        patientCode: pat.patientCode,
+        patientStatus: pat.status,
+        lastMessage: lastMsg ? (lastMsg.type === 'photo' ? '📷 Photo' : lastMsg.type === 'pdf' ? '📄 Document' : lastMsg.type === 'exercise_plan' ? '🏋️ Exercise Routine' : lastMsg.content) : 'No conversations yet',
+        lastMessageTimestamp: lastMsg?.timestamp || 'New',
+        unreadCount,
+        isOnline: pat.id === 'pat-1' || pat.id === 'pat-2'
+      };
+    });
+  };
+
+  // Phase 3: AI Copilot Generators
+  const generateCopilotMotivation = (patientId: string, tone: 'celebratory' | 'empathetic' | 'strict_discipline' = 'celebratory'): string => {
+    const pat = allPatients.find(p => p.id === patientId) || selectedPatient;
+    const name = pat ? pat.name.split(' ')[0] : 'there';
+    const lostKg = pat ? Math.max(0, Number((pat.startingWeightKg - pat.currentWeightKg).toFixed(1))) : 3.5;
+    
+    if (tone === 'celebratory') {
+      return `🌟 Clinical Milestone for ${name}: Outstanding adherence! You have systematically dropped ${lostKg} kg of visceral fat while protecting your lean muscle mass. Your metabolic flexibility and blood sugar stabilization are clearly visible. Keep this momentum into the weekend! 💪🥗`;
+    } else if (tone === 'empathetic') {
+      return `🌱 Gentle check-in for ${name}: Remember that hormonal and metabolic adaptation takes steady consistency, not perfection. If you experienced higher stress or a dining out fluctuation, don't worry. Hydrate well with 2.5L today, prioritize protein in your next meal, and let's reset together. You are doing great! ❤️`;
+    } else {
+      return `🎯 Clinical Reminder for ${name}: Adherence to the prescribed glycemic load is key to keeping your insulin sensitivity high. Please make sure to log your water intake and complete your 35-min movement routine today. The results come from the daily non-negotiables! Let's stay on track. ⏱️`;
+    }
+  };
+
+  const generateCopilotProgressSummary = (patientId: string): string => {
+    const pat = allPatients.find(p => p.id === patientId) || selectedPatient;
+    if (!pat) return 'Patient record not found.';
+    const measurements = getPatientMeasurements(pat.id);
+    const latestMeas = measurements[measurements.length - 1];
+    const initialMeas = measurements[0];
+    const lostKg = (pat.startingWeightKg - pat.currentWeightKg).toFixed(1);
+    const waistLost = (initialMeas && latestMeas) ? (initialMeas.waistInches - latestMeas.waistInches).toFixed(1) : '4.5';
+    
+    return `[CLINICAL PROGRESS SOAP DIGEST - ${pat.name.toUpperCase()} (${pat.patientCode})]
+• Subjective: Patient reports elevated daytime vitality, absence of mid-afternoon hypoglycemia crashes, and improved sleep quality.
+• Objective: Starting Weight: ${pat.startingWeightKg}kg ➔ Current Weight: ${pat.currentWeightKg}kg (Net Loss: -${lostKg} kg).
+• Circumference Trajectory: Waistline reduced by -${waistLost} inches (Visceral fat index decreased from High to Optimal).
+• Assessment: Excellent compliance with low-GI macronutrient splits. Insulin sensitivity markers demonstrating positive reversal.
+• Plan: Maintain Phase 3 Choice Meal Plan at 1,550 kcal with 92g target protein. Continue 4x weekly resistance circuit. Review in 14 days.`;
+  };
+
+  const generateCopilotFoodSwap = (cravingText: string): FoodSwapSuggestion | null => {
+    const lower = (cravingText || '').toLowerCase().trim();
+    if (!lower) return FOOD_SWAPS_CATALOG[0] || null;
+    const found = FOOD_SWAPS_CATALOG.find(item => {
+      const dish = (item.cravingOrDish || '').toLowerCase();
+      const cat = (item.category || '').toLowerCase();
+      const firstWord = dish.split(' ')[0] || '';
+      return dish.includes(lower) || (firstWord && lower.includes(firstWord)) || cat.includes(lower);
+    });
+    return found || FOOD_SWAPS_CATALOG[0];
+  };
+
+  // KPIs Calculations
+  const getDashboardKpis = () => {
+    const active = patients.filter(p => p.status === 'active').length;
+    const totalPatients = patients.length;
+    const totalRev = payments.reduce((acc, curr) => acc + (curr.paidAmount || 0), 0);
+    
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const monthlyRev = payments.reduce((acc, curr) => {
+      const pDate = new Date(curr.paymentDate);
+      if (pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear) {
+        return acc + (curr.paidAmount || 0);
+      }
+      return acc;
+    }, 0);
+
+    const pendingPayments = payments.reduce((acc, curr) => acc + (curr.pendingBalance || 0), 0);
+    const pendingInvoices = invoices.filter(i => i.status === 'pending' || i.status === 'partial' || i.status === 'overdue').length;
+    const renewalsDue = patients.filter(p => p.status === 'pending_renewal').length;
+
+    let totalWeightLost = 0;
+    let countedPatients = 0;
+    patients.forEach(p => {
+      const diff = p.startingWeightKg - p.currentWeightKg;
+      if (diff > 0) {
+        totalWeightLost += diff;
+        countedPatients++;
+      }
+    });
+    const avgWeightLossKg = countedPatients > 0 ? Number((totalWeightLost / countedPatients).toFixed(1)) : 4.5;
+    const activeMealPlansCount = clinicalMealPlans.filter(p => p.status === 'published').length;
+    const unreadChatCount = allChatMessages.filter(m => m.sender === 'patient' && !m.isRead).length;
+    const dueWeighInsCount = MOCK_WEIGHT_UPDATES_DUE.length;
+    const expiringPlansCount = MOCK_EXPIRING_PLANS.length;
+
+    return {
+      activePatients: active,
+      totalPatients,
+      monthlyRevenue: monthlyRev,
+      totalRevenue: totalRev,
+      pendingPaymentsAmount: pendingPayments,
+      pendingInvoicesCount: pendingInvoices,
+      renewalsDueCount: renewalsDue,
+      avgWeightLossKg,
+      activeMealPlansCount,
+      unreadChatCount,
+      dueWeighInsCount,
+      expiringPlansCount
+    };
+  };
+
+  return (
+    <ClinicContext.Provider
+      value={{
+        activeScreen,
+        navigateTo,
+        isAuthenticated: !!authToken,
+        authToken,
+        currentUser,
+        currentClinic,
+        clinics,
+        users,
+        loginWithPassword,
+        requestOtp,
+        verifyOtp,
+        logout,
+        switchClinic,
+        switchUserRole,
+        selectedPatientId,
+        setSelectedPatientId,
+        selectedPatient,
+        selectedInvoiceId,
+        setSelectedInvoiceId,
+        selectedInvoice,
+        selectedMealPlanId,
+        setSelectedMealPlanId,
+        patients,
+        weightRecords,
+        plans,
+        payments,
+        invoices,
+        activities,
+        assessments,
+        clinicalMealPlans,
+        exercisePlans,
+        patientLogs: allPatientLogs,
+        registerPatient,
+        updatePatient,
+        deletePatient,
+        getPatientWeightHistory,
+        addWeightRecord,
+        deleteWeightRecord,
+        createPlan,
+        addPlan,
+        updatePlan,
+        editPlan,
+        archivePlan,
+        unarchivePlan,
+        deletePlan,
+        recordPayment,
+        markInvoicePaid,
+        saveAssessment,
+        getPatientAssessments,
+        getLatestAssessment,
+        saveMealPlan,
+        publishMealPlan,
+        getPatientMealPlans,
+        getActiveMealPlan,
+        saveExercisePlan,
+        publishExercisePlan,
+        getPatientExercisePlan,
+        selectedRecipe,
+        isRecipeModalOpen,
+        openRecipeModal,
+        closeRecipeModal,
+        updatePatientDailyLog,
+        getPatientDailyLog,
+        // Phase 3
+        bodyMeasurements: allBodyMeasurements,
+        addBodyMeasurement,
+        getPatientMeasurements,
+        progressPhotos: allProgressPhotos,
+        addProgressPhoto,
+        deleteProgressPhoto,
+        getPatientPhotos,
+        getPatientReminders,
+        updatePatientReminder,
+        toggleReminderChannel,
+        triggerTestReminderNotification,
+        activeToastNotification,
+        dismissToastNotification,
+        chatMessages: allChatMessages,
+        sendChatMessage,
+        markChatAsRead,
+        getPatientChatMessages,
+        getUnreadChatCount,
+        getAllConversationsSummary,
+        foodSwapsCatalog: FOOD_SWAPS_CATALOG,
+        nutrientGapsTemplates: NUTRIENT_GAP_TEMPLATES,
+        goalDistributionStats: MOCK_GOAL_DISTRIBUTION,
+        weightUpdatesDueList: MOCK_WEIGHT_UPDATES_DUE,
+        expiringPlansList: MOCK_EXPIRING_PLANS,
+        generateCopilotMotivation,
+        generateCopilotProgressSummary,
+        generateCopilotFoodSwap,
+        // Modals
+        isRegisterModalOpen,
+        setIsRegisterModalOpen,
+        isPaymentModalOpen,
+        setIsPaymentModalOpen,
+        isWeightModalOpen,
+        setIsWeightModalOpen,
+        isCreatePlanModalOpen,
+        setIsCreatePlanModalOpen,
+        editingPlan,
+        setEditingPlan,
+        openPlanModal,
+        closePlanModal,
+        isMeasurementModalOpen,
+        setIsMeasurementModalOpen,
+        isPhotoModalOpen,
+        setIsPhotoModalOpen,
+        getDashboardKpis
+      }}
+    >
+      {children}
+    </ClinicContext.Provider>
+  );
+};
+
+export const useClinic = () => {
+  const context = useContext(ClinicContext);
+  if (!context) {
+    throw new Error('useClinic must be used within a ClinicProvider');
+  }
+  return context;
+};
+
