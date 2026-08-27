@@ -8,7 +8,6 @@ import {
   TrendingDown, 
   User, 
   LogOut, 
-  Stethoscope, 
   ShieldCheck, 
   ChevronRight,
   Bot,
@@ -32,7 +31,6 @@ export const PatientAppLayout: React.FC = () => {
     activeScreen, 
     navigateTo, 
     logout, 
-    switchToDoctorMode, 
     getUnreadChatCount,
     currentClinic 
   } = useClinic();
@@ -136,37 +134,28 @@ export const PatientAppLayout: React.FC = () => {
           <div className="flex items-center gap-2">
             
             {/* Patient Badge */}
-            <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-slate-100 border border-slate-200">
-              <div className="w-6 h-6 rounded-full bg-[#183153] text-white flex items-center justify-center text-[11px] font-bold">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200">
+              <div className="w-7 h-7 rounded-full bg-[#183153] text-white flex items-center justify-center text-xs font-bold">
                 {patient?.name?.charAt(0) || 'P'}
               </div>
               <div className="text-left hidden sm:block">
                 <div className="text-xs font-bold text-[#183153] leading-none">
                   {patient?.name || 'Patient Member'}
                 </div>
-                <div className="text-[10px] text-teal-700 font-mono font-bold leading-tight">
+                <div className="text-[10px] text-teal-700 font-mono font-bold leading-tight mt-0.5">
                   {patient?.patientCode || 'PBL-CODE'}
                 </div>
               </div>
             </div>
 
-            {/* Switch to Doctor Mode (Demo paired testing tool) */}
-            <button
-              onClick={switchToDoctorMode}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-[11px] font-bold transition-all shadow-xs cursor-pointer"
-              title="Switch to Doctor Dashboard for review"
-            >
-              <Stethoscope className="w-3.5 h-3.5 text-teal-400" />
-              <span className="hidden sm:inline">Doctor View</span>
-            </button>
-
             {/* Sign Out */}
             <button
               onClick={logout}
-              className="p-1.5 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors cursor-pointer"
               title="Sign Out of Patient Portal"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Sign Out</span>
             </button>
           </div>
 

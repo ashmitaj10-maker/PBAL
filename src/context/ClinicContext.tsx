@@ -172,7 +172,6 @@ interface ClinicContextType {
   loginPatient: (identifier: string, password?: string) => Promise<{ success: boolean; error?: string; patient?: Patient }>;
   isPatientSession: boolean;
   loggedInPatient: Patient | null;
-  switchToDoctorMode: () => void;
 
   // Selected Entities
   selectedPatientId: string | null;
@@ -765,21 +764,6 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setAuthToken(null);
     localStorage.removeItem(STORAGE_KEYS.AUTH);
     setActiveScreen('login');
-  };
-
-  const switchToDoctorMode = () => {
-    setIsPatientSession(false);
-    setLoggedInPatient(null);
-    const doctorUser = users.find(u => u.role === 'doctor') || users[0];
-    setCurrentUser(doctorUser);
-    const mockToken = `jwt_token_${Date.now()}_${doctorUser.id}`;
-    setAuthToken(mockToken);
-    localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify({
-      token: mockToken,
-      userId: doctorUser.id,
-      clinicId: currentClinic.id
-    }));
-    setActiveScreen('dashboard');
   };
 
   // Patient Code Validation
@@ -1991,7 +1975,6 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         loginPatient,
         isPatientSession,
         loggedInPatient,
-        switchToDoctorMode,
         selectedPatientId,
         setSelectedPatientId,
         selectedPatient,
