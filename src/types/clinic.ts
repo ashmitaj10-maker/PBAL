@@ -104,6 +104,12 @@ export interface Patient {
     relationship: string;
     phone: string;
   };
+  dailyMotivationMessage?: {
+    message: string;
+    authorName: string;
+    date: string;
+    tone?: string;
+  };
 }
 
 export interface PaymentRecord {

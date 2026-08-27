@@ -21,7 +21,12 @@ import {
   Utensils,
   BookOpen,
   ArrowRight,
-  HelpCircle
+  HelpCircle,
+  Sun,
+  Heart,
+  Quote,
+  Compass,
+  Pin
 } from 'lucide-react';
 import { FoodSwapSuggestion, SwapRecipe } from '../../types/clinic';
 import { 
@@ -65,6 +70,7 @@ export const AiCopilotView: React.FC = () => {
     sendChatMessage, 
     generateCopilotMotivation, 
     generateCopilotProgressSummary,
+    setPatientDailyMotivation,
     navigateTo,
     isPatientSession
   } = useClinic();
@@ -1043,117 +1049,308 @@ export const AiCopilotView: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 3: PERSONALIZED MOTIVATION & COMPLIANCE GENERATOR */}
+      {/* TAB 3: PERSONALIZED MOTIVATION & MINDSET (ROLE-BASED) */}
       {activeTab === 'motivation' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          {/* Generator Controls */}
-          <div className="lg:col-span-5 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-5">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-teal-600" />
-                AI Motivation Tone Engine
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Generate highly empathetic or high-accountability WhatsApp text adapted to patient's progress
-              </p>
-            </div>
-
-            {/* Tone Selector */}
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold text-slate-700">Select Motivational Style</label>
+        <div className="space-y-6">
+          {isPatientSession ? (
+            /* =========================================================================
+               PATIENT VIEW: 100% READ-ONLY DAILY MOTIVATION & MINDSET
+               ========================================================================= */
+            <div className="max-w-4xl mx-auto space-y-6">
               
-              <button
-                type="button"
-                onClick={() => setMotivationTone('celebratory')}
-                className={`w-full p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                  motivationTone === 'celebratory'
-                    ? 'bg-emerald-50 border-emerald-500 text-emerald-950 font-bold shadow-xs'
-                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                🌟 Celebratory & Milestone
-                <span className="block text-[10px] font-normal text-slate-600 mt-0.5">
-                  Highlights weight loss, visceral drop, and consistency achievements.
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setMotivationTone('empathetic')}
-                className={`w-full p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                  motivationTone === 'empathetic'
-                    ? 'bg-teal-50 border-teal-500 text-teal-950 font-bold shadow-xs'
-                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                🌱 Empathetic Stress Reset
-                <span className="block text-[10px] font-normal text-slate-600 mt-0.5">
-                  Gentle guidance during stress periods, plateaus, or dining out slips.
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setMotivationTone('strict_discipline')}
-                className={`w-full p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                  motivationTone === 'strict_discipline'
-                    ? 'bg-amber-50 border-amber-500 text-amber-950 font-bold shadow-xs'
-                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                🎯 Accountability & Non-Negotiables
-                <span className="block text-[10px] font-normal text-slate-600 mt-0.5">
-                  Firm reminders on protein targets, 2.5L water & movement routines.
-                </span>
-              </button>
-            </div>
-
-            {/* Quick Context Summary */}
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
-              <span className="font-semibold text-slate-700">Current Context:</span>
-              <div className="text-slate-600">
-                Patient: <strong>{currentPatient?.name || 'Patient'}</strong> • Dropped <strong>{Math.max(0, (currentPatient?.startingWeightKg || 74.5) - (currentPatient?.currentWeightKg || 68.4)).toFixed(1)} kg</strong> • Diet: <strong>{currentPatient?.foodPreference || 'Vegetarian'}</strong>
-              </div>
-            </div>
-          </div>
-
-          {/* Live Generated Message Canvas */}
-          <div className="lg:col-span-7 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between space-y-4">
-            <div>
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <span className="text-xs font-bold text-slate-900">Generated Clinical Message</span>
-                <span className="text-[11px] text-teal-700 font-mono">Tailored for WhatsApp</span>
+              {/* Header Banner */}
+              <div className="bg-linear-to-r from-emerald-600 via-teal-600 to-teal-700 text-white rounded-3xl p-6 sm:p-8 shadow-sm space-y-2 relative overflow-hidden">
+                <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 opacity-10 pointer-events-none">
+                  <Sun className="w-64 h-64 text-white" />
+                </div>
+                
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-200">
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  Daily Motivation & Mindset
+                </div>
+                
+                <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                  Nourish Your Body, Empower Your Mind
+                </h2>
+                
+                <p className="text-xs sm:text-sm text-emerald-100 max-w-xl leading-relaxed">
+                  Every mindful meal and healthy habit is a step toward metabolic vitality. Be proud of the progress you are making today.
+                </p>
               </div>
 
-              <div className="mt-4 p-4 bg-[#efeae2]/50 rounded-2xl border border-slate-200">
-                <div className="bg-[#d9fdd3] text-slate-900 p-4 rounded-2xl shadow-xs leading-relaxed text-sm whitespace-pre-wrap border border-emerald-200/60">
-                  {generatedMotivation}
+              {/* Dietitian's Personalized Daily Note (If Assigned by Doctor) */}
+              {currentPatient?.dailyMotivationMessage?.message ? (
+                <div className="bg-linear-to-br from-amber-50 to-orange-50/60 rounded-3xl p-6 border-2 border-amber-200 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between gap-2 border-b border-amber-200/60 pb-3 flex-wrap">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-amber-500 text-white font-black flex items-center justify-center text-xs shadow-2xs">
+                        👨‍⚕️
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-900 block">
+                          Personal Message From Your Dietitian
+                        </span>
+                        <h4 className="text-xs font-bold text-slate-900">
+                          {currentPatient.dailyMotivationMessage.authorName || 'Clinical Dietitian'}
+                        </h4>
+                      </div>
+                    </div>
+
+                    <span className="text-[10px] font-bold text-amber-800 bg-amber-200/80 px-2.5 py-0.5 rounded-full">
+                      📅 {currentPatient.dailyMotivationMessage.date ? `Assigned ${currentPatient.dailyMotivationMessage.date}` : 'Today\'s Focus'}
+                    </span>
+                  </div>
+
+                  <p className="text-sm font-medium text-slate-800 leading-relaxed italic bg-white/80 p-4 rounded-2xl border border-amber-200/50 shadow-2xs whitespace-pre-wrap">
+                    "{currentPatient.dailyMotivationMessage.message}"
+                  </p>
+                </div>
+              ) : null}
+
+              {/* Featured Daily Motivation Quote Card */}
+              <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm space-y-4 text-center relative overflow-hidden">
+                <div className="w-14 h-14 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto shadow-xs border border-teal-100">
+                  <Quote className="w-7 h-7 text-teal-600" />
+                </div>
+
+                <div className="space-y-2 max-w-xl mx-auto">
+                  <span className="text-xs font-extrabold uppercase tracking-widest text-teal-700 block">
+                    Daily Motivation
+                  </span>
+                  <blockquote className="text-xl sm:text-2xl font-black text-slate-900 leading-snug tracking-tight">
+                    "Small, consistent choices add up to meaningful change. Focus on what you can do today."
+                  </blockquote>
+                  <p className="text-xs text-slate-500 italic pt-1">
+                    Consistency over perfection. Every healthy choice strengthens your body and mind.
+                  </p>
                 </div>
               </div>
+
+              {/* Daily Health Affirmations Grid */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                  <Heart className="w-4 h-4 text-rose-500" />
+                  Today's Health Affirmations
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                    <span className="text-2xl block">🥗</span>
+                    <h4 className="text-xs font-black text-slate-900">Nourishment & Vitality</h4>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      "I nourish my body with wholesome, balanced fuel and celebrate every healthy choice I make today."
+                    </p>
+                  </div>
+
+                  <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                    <span className="text-2xl block">💧</span>
+                    <h4 className="text-xs font-black text-slate-900">Hydration & Energy</h4>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      "I stay refreshed and energized by honoring my body's need for pure water, movement, and restful sleep."
+                    </p>
+                  </div>
+
+                  <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                    <span className="text-2xl block">🌱</span>
+                    <h4 className="text-xs font-black text-slate-900">Sustainable Habit</h4>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      "I am creating lasting, joyful wellness habits that build strength and confidence day by day."
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mindset Habits & Reflection */}
+              <div className="bg-emerald-50/70 rounded-3xl p-6 border border-emerald-200 shadow-xs space-y-4">
+                <h3 className="text-xs font-black uppercase tracking-wider text-emerald-900 flex items-center gap-2">
+                  <Compass className="w-4 h-4 text-emerald-700" />
+                  Mindful Wellness Reflections for Today
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3 bg-white rounded-2xl border border-emerald-100 space-y-1">
+                    <strong className="text-emerald-950 font-bold block">🍽️ Mindful Savoring</strong>
+                    <span className="text-slate-600 text-[11px] leading-relaxed block">
+                      Chew slowly and take a 30-second pause halfway through meals to allow your satiety signals to catch up.
+                    </span>
+                  </div>
+
+                  <div className="p-3 bg-white rounded-2xl border border-emerald-100 space-y-1">
+                    <strong className="text-emerald-950 font-bold block">🚶 10-Min Post-Meal Walk</strong>
+                    <span className="text-slate-600 text-[11px] leading-relaxed block">
+                      A gentle 10-minute stroll after lunch or dinner flattens postprandial glucose curves by over 25%.
+                    </span>
+                  </div>
+
+                  <div className="p-3 bg-white rounded-2xl border border-emerald-100 space-y-1">
+                    <strong className="text-emerald-950 font-bold block">😴 Restorative Sleep</strong>
+                    <span className="text-slate-600 text-[11px] leading-relaxed block">
+                      Dim screens 30 minutes before bedtime to support natural melatonin and evening cellular repair.
+                    </span>
+                  </div>
+                </div>
+              </div>
+
             </div>
+          ) : (
+            /* =========================================================================
+               DOCTOR VIEW: MOTIVATION & COMPLIANCE GENERATOR & PUBLISHER
+               ========================================================================= */
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              
+              {/* Generator Controls */}
+              <div className="lg:col-span-5 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-5">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-teal-600" />
+                      AI Motivation Tone Engine
+                    </h3>
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-teal-50 text-teal-800 border border-teal-200 px-2 py-0.5 rounded-md">
+                      Doctor Workspace
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Generate tailored motivational messages and publish them to the patient's portal or WhatsApp chat.
+                  </p>
+                </div>
 
-            {/* Action Bar */}
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-              <button
-                onClick={() => handleCopy(generatedMotivation, 'gen-mot')}
-                className="px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                {copiedKey === 'gen-mot' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                {copiedKey === 'gen-mot' ? 'Copied to Clipboard' : 'Copy Text'}
-              </button>
+                {/* Tone Selector */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-slate-700">Select Motivational Style</label>
+                  
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMotivationTone('celebratory');
+                      if (currentPatient) {
+                        setGeneratedMotivation(generateCopilotMotivation(currentPatient.id, 'celebratory'));
+                      }
+                    }}
+                    className={`w-full p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      motivationTone === 'celebratory'
+                        ? 'bg-emerald-50 border-emerald-500 text-emerald-950 font-bold shadow-xs'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    🌟 Celebratory & Milestone
+                    <span className="block text-[10px] font-normal text-slate-600 mt-0.5">
+                      Highlights weight loss, visceral drop, and consistency achievements.
+                    </span>
+                  </button>
 
-              <button
-                onClick={() => handleSendToChat(generatedMotivation, 'gen-mot-chat')}
-                className="px-5 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
-              >
-                {sentToChatKey === 'gen-mot-chat' ? <Check className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
-                {sentToChatKey === 'gen-mot-chat' ? 'Sent into WhatsApp Chat!' : 'Send into Patient Chat'}
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMotivationTone('empathetic');
+                      if (currentPatient) {
+                        setGeneratedMotivation(generateCopilotMotivation(currentPatient.id, 'empathetic'));
+                      }
+                    }}
+                    className={`w-full p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      motivationTone === 'empathetic'
+                        ? 'bg-teal-50 border-teal-500 text-teal-950 font-bold shadow-xs'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    🌱 Empathetic Stress Reset
+                    <span className="block text-[10px] font-normal text-slate-600 mt-0.5">
+                      Gentle guidance during stress periods, plateaus, or dining out slips.
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMotivationTone('strict_discipline');
+                      if (currentPatient) {
+                        setGeneratedMotivation(generateCopilotMotivation(currentPatient.id, 'strict_discipline'));
+                      }
+                    }}
+                    className={`w-full p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      motivationTone === 'strict_discipline'
+                        ? 'bg-amber-50 border-amber-500 text-amber-950 font-bold shadow-xs'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    🎯 Accountability & Non-Negotiables
+                    <span className="block text-[10px] font-normal text-slate-600 mt-0.5">
+                      Firm reminders on protein targets, 2.5L water & movement routines.
+                    </span>
+                  </button>
+                </div>
+
+                {/* Quick Context Summary */}
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
+                  <span className="font-semibold text-slate-700">Target Patient:</span>
+                  <div className="text-slate-600">
+                    Patient: <strong>{currentPatient?.name || 'Patient'}</strong> • Dropped <strong>{Math.max(0, (currentPatient?.startingWeightKg || 74.5) - (currentPatient?.currentWeightKg || 68.4)).toFixed(1)} kg</strong> • Diet: <strong>{currentPatient?.foodPreference || 'Vegetarian'}</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Editable Message Canvas & Doctor Action Bar */}
+              <div className="lg:col-span-7 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <span className="text-xs font-bold text-slate-900">Customizable Motivation Canvas</span>
+                    <span className="text-[11px] text-teal-700 font-medium">Doctor Edit Mode</span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-xs font-semibold text-slate-600">
+                      Message Content (Edit or customize as needed):
+                    </label>
+                    <textarea
+                      rows={5}
+                      value={generatedMotivation}
+                      onChange={(e) => setGeneratedMotivation(e.target.value)}
+                      className="w-full text-xs p-3.5 rounded-2xl border border-slate-300 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-slate-900 leading-relaxed font-medium"
+                      placeholder="Type custom motivational message for patient..."
+                    />
+                  </div>
+                </div>
+
+                {/* Doctor Action Bar */}
+                <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
+                  <button
+                    onClick={() => handleCopy(generatedMotivation, 'gen-mot')}
+                    className="px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 rounded-xl border border-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    {copiedKey === 'gen-mot' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedKey === 'gen-mot' ? 'Copied' : 'Copy'}
+                  </button>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Publish as Patient's Daily Motivation */}
+                    <button
+                      onClick={() => {
+                        if (!currentPatient) return;
+                        setPatientDailyMotivation(currentPatient.id, generatedMotivation, motivationTone);
+                        setSentToChatKey('published-mot');
+                        setTimeout(() => setSentToChatKey(null), 2500);
+                      }}
+                      className="px-4 py-2 text-xs font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 rounded-xl flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+                    >
+                      {sentToChatKey === 'published-mot' ? <Check className="w-3.5 h-3.5 text-emerald-700" /> : <Pin className="w-3.5 h-3.5 text-emerald-700" />}
+                      {sentToChatKey === 'published-mot' ? 'Published to Patient Portal!' : 'Publish to Patient Portal'}
+                    </button>
+
+                    {/* Send into Patient WhatsApp Chat */}
+                    <button
+                      onClick={() => handleSendToChat(generatedMotivation, 'gen-mot-chat')}
+                      className="px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      {sentToChatKey === 'gen-mot-chat' ? <Check className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
+                      {sentToChatKey === 'gen-mot-chat' ? 'Sent into Chat!' : 'Send to Patient Chat'}
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
             </div>
-
-          </div>
-
+          )}
         </div>
       )}
 

@@ -281,10 +281,10 @@ interface ClinicContextType {
   nutrientGapsTemplates: NutrientGapAnalysis[];
   goalDistributionStats: GoalDistributionStat[];
   weightUpdatesDueList: WeightUpdateDueItem[];
-  expiringPlansList: ExpiringPlanItem[];
   generateCopilotMotivation: (patientId: string, tone?: 'celebratory' | 'empathetic' | 'strict_discipline') => string;
   generateCopilotProgressSummary: (patientId: string) => string;
   generateCopilotFoodSwap: (cravingText: string) => FoodSwapSuggestion | null;
+  setPatientDailyMotivation: (patientId: string, message: string, tone?: string) => void;
 
   // Modals state
   isRegisterModalOpen: boolean;
@@ -1865,9 +1865,24 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       return `🌟 Clinical Milestone for ${name}: Outstanding adherence! You have systematically dropped ${lostKg} kg of visceral fat while protecting your lean muscle mass. Your metabolic flexibility and blood sugar stabilization are clearly visible. Keep this momentum into the weekend! 💪🥗`;
     } else if (tone === 'empathetic') {
       return `🌱 Gentle check-in for ${name}: Remember that hormonal and metabolic adaptation takes steady consistency, not perfection. If you experienced higher stress or a dining out fluctuation, don't worry. Hydrate well with 2.5L today, prioritize protein in your next meal, and let's reset together. You are doing great! ❤️`;
-    } else {
-      return `🎯 Clinical Reminder for ${name}: Adherence to the prescribed glycemic load is key to keeping your insulin sensitivity high. Please make sure to log your water intake and complete your 35-min movement routine today. The results come from the daily non-negotiables! Let's stay on track. ⏱️`;
     }
+  };
+
+  const setPatientDailyMotivation = (patientId: string, message: string, tone?: string) => {
+    if (isPatientSession) return; // Patients cannot edit or publish motivation
+    const targetPatient = allPatients.find(p => p.id === patientId);
+    if (!targetPatient) return;
+    
+    const motivationPayload = {
+      message,
+      authorName: currentUser?.name || 'Dr. Ashmita Joshi',
+      date: new Date().toISOString().split('T')[0],
+      tone: tone || 'celebratory'
+    };
+
+    updatePatient(patientId, {
+      dailyMotivationMessage: motivationPayload
+    });
   };
 
   const generateCopilotProgressSummary = (patientId: string): string => {
@@ -2052,6 +2067,7 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         generateCopilotMotivation,
         generateCopilotProgressSummary,
         generateCopilotFoodSwap,
+        setPatientDailyMotivation,
         // Modals
         isRegisterModalOpen,
         setIsRegisterModalOpen,

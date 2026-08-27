@@ -45,7 +45,6 @@ export const PatientMobileHomeView: React.FC = () => {
     getPatientDailyLog,
     currentClinic,
     isPatientSession,
-    switchToDoctorMode,
     logout
   } = useClinic();
 
@@ -259,6 +258,29 @@ export const PatientMobileHomeView: React.FC = () => {
               <div className="flex items-center gap-1 text-xs font-bold text-teal-700 group-hover:translate-x-0.5 transition-transform">
                 <span>Open Chat</span>
                 <ChevronRight className="w-4 h-4" />
+              </div>
+            </div>
+
+            {/* Daily Motivation & Mindset Card (Read-Only for Patient) */}
+            <div className="bg-gradient-to-br from-teal-50/80 via-emerald-50/50 to-white p-5 rounded-2xl border border-teal-200/80 shadow-xs space-y-2 relative overflow-hidden">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-wider text-teal-800 flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+                  Daily Motivation & Mindset
+                </span>
+                <span className="text-[10px] text-teal-700 font-semibold">Today's Focus</span>
+              </div>
+              <blockquote className="text-xs font-bold text-slate-800 italic leading-relaxed">
+                "{patient.dailyMotivationMessage?.message || 'Small, consistent choices add up to meaningful change. Focus on what you can do today.'}"
+              </blockquote>
+              <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1">
+                <span>{patient.dailyMotivationMessage?.authorName ? `Assigned by ${patient.dailyMotivationMessage.authorName}` : 'Consistency over perfection'}</span>
+                <button 
+                  onClick={() => navigateTo('ai_copilot')}
+                  className="font-bold text-teal-700 hover:underline cursor-pointer flex items-center gap-0.5"
+                >
+                  View Mindset & Swaps ➔
+                </button>
               </div>
             </div>
 
