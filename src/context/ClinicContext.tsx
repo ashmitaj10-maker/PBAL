@@ -82,6 +82,7 @@ export type ClinicScreen =
   | 'reminder_settings'
   | 'chat'
   | 'patient_chat'
+  | 'patient_exercise'
   | 'ai_copilot';
 
 interface RegisterPatientInput {
@@ -676,6 +677,7 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   // RBAC ALLOWED SCREENS FOR PATIENTS
   const PATIENT_PERMITTED_SCREENS: ClinicScreen[] = [
     'patient_portal',
+    'patient_exercise',
     'ai_copilot',
     'patient_chat',
     'progress_dashboard',

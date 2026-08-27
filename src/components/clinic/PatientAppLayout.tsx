@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useClinic, ClinicScreen } from '../../context/ClinicContext';
 import { 
   Activity, 
@@ -15,9 +15,15 @@ import {
   Heart,
   Droplets,
   Flame,
-  Award
+  Award,
+  Dumbbell,
+  Menu,
+  X,
+  Clock,
+  ExternalLink
 } from 'lucide-react';
 import { PatientMobileHomeView } from './PatientMobileHomeView';
+import { PatientExerciseView } from './PatientExerciseView';
 import { AiCopilotView } from './AiCopilotView';
 import { PatientChatView } from './PatientChatView';
 import { ProgressDashboardView } from './ProgressDashboardView';
@@ -35,8 +41,14 @@ export const PatientAppLayout: React.FC = () => {
     currentClinic 
   } = useClinic();
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const patient = loggedInPatient || selectedPatient;
-  const assignedDietician = (users || []).find(u => u.id === patient?.assignedDoctorId) || users[0];
+  const assignedDietitian = (users || []).find(u => u.id === patient?.assignedDoctorId) || {
+    name: 'Dr. Ashmita Joshi',
+    roleTitle: 'Chief Clinical Dietitian',
+    specialization: 'Metabolic & Clinical Nutrition'
+  };
   const unreadChats = patient ? getUnreadChatCount(patient.id) : 0;
 
   interface NavItem {
@@ -50,164 +62,238 @@ export const PatientAppLayout: React.FC = () => {
   const navItems: NavItem[] = [
     {
       id: 'patient_portal',
-      label: 'My Day & Plan',
+      label: 'My Day & Meals',
       icon: Utensils,
-      description: 'Daily meals, hydration & workouts'
+      description: 'Daily meals, hydration & logs'
+    },
+    {
+      id: 'patient_exercise',
+      label: 'Guided Exercises',
+      icon: Dumbbell,
+      badge: 'Visual Guides',
+      description: 'Form diagrams & step-by-step guidance'
     },
     {
       id: 'ai_copilot',
-      label: 'Doctor AI Copilot',
+      label: 'Craving Search & Swaps',
       icon: Bot,
       badge: 'Cravings AI',
-      description: 'Search cravings & healthy food swaps'
+      description: 'Find healthy swaps & full recipes'
     },
     {
       id: 'patient_chat',
       label: 'Dietitian Chat',
       icon: MessageSquare,
       badge: unreadChats > 0 ? unreadChats : undefined,
-      description: 'Direct messaging with your doctor'
+      description: 'Direct 2-way clinical messaging'
     },
     {
       id: 'progress_dashboard',
-      label: 'My Progress',
+      label: 'My Progress & Stats',
       icon: TrendingDown,
-      description: 'Scale weight curves & milestones'
+      description: 'Weight curves & body milestones'
     },
     {
       id: 'patient_profile',
       label: 'My Health Profile',
       icon: User,
-      description: 'Read-only clinical details & plan'
+      description: 'Clinical file & metabolic targets'
     }
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FFF8]/80 text-slate-900 flex flex-col font-sans selection:bg-teal-500/20">
+    <div className="min-h-screen bg-[#F8FFF8]/80 text-slate-900 flex flex-col md:flex-row font-sans selection:bg-teal-500/20">
       
-      {/* Top Header Bar for Patients */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-emerald-100 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          
-          {/* Brand Logo & Live Patient Status */}
+      {/* =========================================================================
+          LEFT-SIDE VERTICAL SCROLLABLE SIDEBAR (PATIENT APP NAVIGATION)
+          ========================================================================= */}
+      <aside className="hidden md:flex w-72 lg:w-80 bg-white border-r border-emerald-100 flex-col shrink-0 h-screen sticky top-0 z-30 shadow-xs">
+        
+        {/* Top Branding */}
+        <div className="p-5 border-b border-emerald-100/80 bg-gradient-to-br from-white to-[#F8FFF8]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-800 via-[#183153] to-emerald-900 flex items-center justify-center text-white shadow-sm">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-800 via-[#183153] to-emerald-900 flex items-center justify-center text-white shadow-sm shrink-0">
               <Activity className="w-5 h-5 text-[#6BBF59]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm sm:text-base font-black tracking-tight text-[#183153]">
+                <span className="text-base font-black tracking-tight text-[#183153]">
                   Perfect Body & Life
                 </span>
-                <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                  Patient Portal
-                </span>
               </div>
-              <p className="text-[11px] text-slate-500 hidden sm:block">
-                Prescribed Medical Nutrition & Wellness
+              <p className="text-[11px] text-teal-700 font-semibold flex items-center gap-1 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Patient Health Portal
               </p>
             </div>
           </div>
 
-          {/* Assigned Dietitian Chip (Visible on desktop & tablet) */}
-          <div 
-            onClick={() => navigateTo('patient_chat')}
-            className="hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-teal-50/80 hover:bg-teal-100/80 border border-teal-200/80 cursor-pointer transition-all group"
-            title="Click to message your dietitian"
-          >
-            <div className="w-7 h-7 rounded-full bg-teal-700 text-white flex items-center justify-center font-bold text-xs">
-              {assignedDietician?.name?.charAt(0) || 'D'}
-            </div>
-            <div className="text-left text-xs">
-              <div className="font-bold text-teal-950 flex items-center gap-1">
-                <span>{assignedDietician?.name || 'Dr. Ashmita Joshi'}</span>
-                <span className="text-[9px] bg-teal-200 text-teal-900 px-1.5 py-0.2 rounded font-bold">Dietitian</span>
-              </div>
-              <p className="text-[10px] text-teal-700 truncate max-w-[160px]">
-                {assignedDietician?.roleTitle || 'Clinical Nutrition Specialist'}
-              </p>
-            </div>
-          </div>
-
-          {/* Patient Profile & Mode Switch Actions */}
-          <div className="flex items-center gap-2">
-            
-            {/* Patient Badge */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200">
-              <div className="w-7 h-7 rounded-full bg-[#183153] text-white flex items-center justify-center text-xs font-bold">
+          {/* Patient Info Card */}
+          <div className="mt-4 p-3 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-[#183153] text-white flex items-center justify-center text-xs font-bold shrink-0">
                 {patient?.name?.charAt(0) || 'P'}
               </div>
-              <div className="text-left hidden sm:block">
-                <div className="text-xs font-bold text-[#183153] leading-none">
+              <div className="min-w-0">
+                <h4 className="text-xs font-bold text-slate-900 truncate">
                   {patient?.name || 'Patient Member'}
-                </div>
-                <div className="text-[10px] text-teal-700 font-mono font-bold leading-tight mt-0.5">
-                  {patient?.patientCode || 'PBL-CODE'}
-                </div>
+                </h4>
+                <span className="text-[10px] text-teal-700 font-mono font-bold block truncate">
+                  Code: {patient?.patientCode || 'PBL-CODE'}
+                </span>
               </div>
             </div>
 
-            {/* Sign Out */}
-            <button
-              onClick={logout}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors cursor-pointer"
-              title="Sign Out of Patient Portal"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Sign Out</span>
-            </button>
+            <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-md shrink-0">
+              Active
+            </span>
           </div>
-
         </div>
 
-        {/* Desktop Navigation Tabs Strip */}
-        <div className="hidden sm:block border-t border-slate-100 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <nav className="flex space-x-1 overflow-x-auto py-1.5 scrollbar-none">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeScreen === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => navigateTo(item.id)}
-                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                      isActive
-                        ? 'bg-gradient-to-r from-[#183153] to-teal-900 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
-                    }`}
-                  >
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-400' : 'text-slate-400'}`} />
-                    <span>{item.label}</span>
+        {/* Assigned Dietitian Card */}
+        <div className="p-3 mx-4 my-3 bg-gradient-to-r from-teal-50/90 to-emerald-50/70 rounded-2xl border border-teal-200/80 shadow-2xs">
+          <div 
+            onClick={() => navigateTo('patient_chat')}
+            className="flex items-center justify-between cursor-pointer group"
+            title="Click to chat with your dietitian"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-full bg-teal-700 text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-2xs">
+                👩‍⚕️
+              </div>
+              <div className="text-left">
+                <div className="text-xs font-bold text-teal-950 flex items-center gap-1">
+                  <span>{assignedDietitian?.name || 'Dr. Ashmita Joshi'}</span>
+                </div>
+                <p className="text-[10px] text-teal-700">
+                  {assignedDietitian?.roleTitle || 'Clinical Dietitian'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-0.5 text-xs font-bold text-teal-800 group-hover:translate-x-0.5 transition-transform">
+              <span className="text-[10px]">Chat</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable Navigation Menu */}
+        <div className="flex-1 overflow-y-auto px-4 py-2 space-y-1.5 scrollbar-thin scrollbar-thumb-slate-200">
+          <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-3 py-1">
+            Menu Navigation
+          </div>
+
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeScreen === item.id;
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => navigateTo(item.id)}
+                className={`w-full flex items-start gap-3 p-3 rounded-2xl text-left transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-gradient-to-r from-[#183153] to-teal-900 text-white shadow-sm ring-1 ring-teal-950/10'
+                    : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+              >
+                <div className={`p-1.5 rounded-xl shrink-0 mt-0.5 ${
+                  isActive ? 'bg-white/15 text-emerald-300' : 'bg-slate-100 text-slate-500'
+                }`}>
+                  <Icon className="w-4 h-4" />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className={`text-xs font-bold truncate ${isActive ? 'text-white' : 'text-slate-900'}`}>
+                      {item.label}
+                    </span>
+
                     {item.badge && (
-                      <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                      <span className={`px-1.5 py-0.2 rounded-md text-[9px] font-black shrink-0 ${
                         isActive 
-                          ? 'bg-emerald-500 text-white' 
-                          : 'bg-emerald-100 text-emerald-800'
+                          ? 'bg-emerald-400 text-slate-950 shadow-2xs' 
+                          : 'bg-emerald-100 text-emerald-900 border border-emerald-200'
                       }`}>
                         {item.badge}
                       </span>
                     )}
-                  </button>
-                );
-              })}
-            </nav>
+                  </div>
+                  <p className={`text-[10px] truncate mt-0.5 ${isActive ? 'text-emerald-100/80' : 'text-slate-500'}`}>
+                    {item.description}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Sidebar Footer: Sign Out & Support */}
+        <div className="p-4 border-t border-slate-100 bg-white space-y-2 shrink-0">
+          <button
+            onClick={logout}
+            className="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors cursor-pointer"
+            title="Sign Out of Patient Portal"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Sign Out</span>
+          </button>
+
+          <p className="text-[10px] text-center text-slate-400 leading-tight">
+            Perfect Body & Life • Supervised Clinical Care
+          </p>
+        </div>
+
+      </aside>
+
+      {/* =========================================================================
+          MOBILE TOP BAR (FOR SMALL SCREENS)
+          ========================================================================= */}
+      <header className="md:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-emerald-100 shadow-xs px-4 h-14 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-teal-800 to-emerald-900 flex items-center justify-center text-white shadow-2xs">
+            <Activity className="w-4 h-4 text-[#6BBF59]" />
           </div>
+          <div>
+            <span className="text-xs font-black text-[#183153]">
+              Perfect Body & Life
+            </span>
+            <span className="text-[10px] text-emerald-700 font-bold block leading-none">
+              Patient Portal
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={logout}
+            className="p-1.5 text-slate-500 hover:text-rose-600 rounded-lg"
+            title="Sign Out"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 sm:pb-8">
-        {activeScreen === 'patient_portal' && <PatientMobileHomeView />}
-        {activeScreen === 'ai_copilot' && <AiCopilotView />}
-        {activeScreen === 'patient_chat' && <PatientChatView />}
-        {activeScreen === 'progress_dashboard' && <ProgressDashboardView />}
-        {activeScreen === 'patient_profile' && <PatientProfileView />}
-      </main>
+      {/* =========================================================================
+          MAIN CONTENT AREA (SCROLLABLE RIGHT VIEWPORT)
+          ========================================================================= */}
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+        <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-12">
+          {activeScreen === 'patient_portal' && <PatientMobileHomeView />}
+          {activeScreen === 'patient_exercise' && <PatientExerciseView />}
+          {activeScreen === 'ai_copilot' && <AiCopilotView />}
+          {activeScreen === 'patient_chat' && <PatientChatView />}
+          {activeScreen === 'progress_dashboard' && <ProgressDashboardView />}
+          {activeScreen === 'patient_profile' && <PatientProfileView />}
+        </main>
+      </div>
 
-      {/* Mobile Bottom Navigation Bar */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 px-2 py-1.5 shadow-lg flex items-center justify-around">
+      {/* =========================================================================
+          MOBILE BOTTOM NAVIGATION STRIP
+          ========================================================================= */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 px-1.5 py-1 shadow-lg flex items-center justify-around overflow-x-auto no-scrollbar">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeScreen === item.id;
@@ -215,33 +301,21 @@ export const PatientAppLayout: React.FC = () => {
             <button
               key={item.id}
               onClick={() => navigateTo(item.id)}
-              className={`flex flex-col items-center py-1 px-2 rounded-xl text-[10px] font-bold transition-all relative ${
+              className={`flex flex-col items-center py-1 px-1.5 rounded-xl text-[9px] font-bold transition-all relative shrink-0 ${
                 isActive ? 'text-teal-900 font-black' : 'text-slate-500'
               }`}
             >
-              <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-teal-100 text-teal-900 scale-110' : ''}`}>
-                <Icon className="w-5 h-5" />
+              <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-teal-100 text-teal-900 scale-105' : ''}`}>
+                <Icon className="w-4 h-4" />
               </div>
-              <span className="mt-0.5 truncate max-w-[64px]">{item.label.split(' ')[0]}</span>
+              <span className="mt-0.5 truncate max-w-[56px]">{item.label.split(' ')[0]}</span>
               {item.badge && (
-                <span className="absolute top-0 right-1 w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                <span className="absolute top-0 right-0 w-2 h-2 rounded-full bg-emerald-500" />
               )}
             </button>
           );
         })}
       </div>
-
-      {/* Patient Footer */}
-      <footer className="hidden sm:block border-t border-emerald-100 bg-white py-4 text-center text-xs text-slate-500 mt-auto">
-        <div className="max-w-7xl mx-auto px-4">
-          <p className="font-semibold text-slate-700">
-            Perfect Body & Life • Supervised by Clinical Dietitian {assignedDietician?.name || 'Dr. Ashmita Joshi'}
-          </p>
-          <p className="text-[11px] text-slate-400 mt-0.5">
-            For medical emergencies or acute clinical updates, please contact your clinic helpline or message your dietitian directly in chat.
-          </p>
-        </div>
-      </footer>
 
     </div>
   );

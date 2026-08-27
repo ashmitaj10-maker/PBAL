@@ -507,6 +507,16 @@ export const PatientMobileHomeView: React.FC = () => {
                     );
                   })}
                 </div>
+
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                  <button
+                    onClick={() => navigateTo('patient_exercise')}
+                    className="text-xs font-bold text-teal-700 hover:text-teal-900 hover:underline flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Dumbbell className="w-3.5 h-3.5" />
+                    <span>View Form Diagrams & Step-by-Step Guides ➔</span>
+                  </button>
+                </div>
               </div>
             )}
 
