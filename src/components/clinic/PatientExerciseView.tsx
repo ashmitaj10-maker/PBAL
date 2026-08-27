@@ -23,7 +23,8 @@ import {
   Layers,
   Award,
   Zap,
-  Target
+  Target,
+  Wind
 } from 'lucide-react';
 import { ExerciseDetailItem, EXERCISE_GUIDE_CATALOG } from '../../data/exerciseGuideData';
 
@@ -54,6 +55,7 @@ export const PatientExerciseView: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<ExerciseCategoryFilter>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeExerciseModal, setActiveExerciseModal] = useState<ExerciseDetailItem | null>(null);
+  const [selectedPhaseIndex, setSelectedPhaseIndex] = useState<number>(0);
 
   // Active Timer state for timed exercises
   const [timerSeconds, setTimerSeconds] = useState<number>(45);
@@ -71,7 +73,8 @@ export const PatientExerciseView: React.FC = () => {
         return (
           ex.name.toLowerCase().includes(q) ||
           ex.purpose.toLowerCase().includes(q) ||
-          ex.targetMuscles.some(m => m.toLowerCase().includes(q))
+          ex.targetMuscles.some(m => m.toLowerCase().includes(q)) ||
+          (ex.primaryMover || '').toLowerCase().includes(q)
         );
       }
       return true;
@@ -127,13 +130,13 @@ export const PatientExerciseView: React.FC = () => {
           <div className="space-y-2 max-w-2xl">
             <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-300">
               <Zap className="w-4 h-4 text-emerald-400" />
-              Prescribed Metabolic Movement & Exercise Guide
+              Realistic Biomechanical Movement & Exercise Reference
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
               Guided Exercise & Form Reference
             </h1>
             <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
-              Detailed step-by-step biomechanics, breathing techniques, and illustrated movement diagrams tailored to optimize your insulin sensitivity and protect joint health.
+              Step-by-step human demonstrations with posture alignments, 2-to-4 pose movement trajectories, breathing cadence, and joint angles to ensure safe, effective metabolic workouts.
             </p>
           </div>
 
@@ -176,7 +179,7 @@ export const PatientExerciseView: React.FC = () => {
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
             <input
               type="text"
-              placeholder="Search by exercise name, body area (e.g. glutes, core, posture, hamstrings)..."
+              placeholder="Search by exercise name, target muscle (e.g. quads, glutes, hamstrings, core)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full text-xs sm:text-sm pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-teal-500 font-medium text-slate-900 transition-all"
@@ -209,7 +212,7 @@ export const PatientExerciseView: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Exercises Grid with AI Illustrated Visual Diagrams */}
+      {/* Main Exercises Grid with Realistic Multi-Frame Human Demonstrations */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
         {(filteredExercises || []).map((exercise) => {
           const isCompleted = (dailyLog.exercisesCompleted || []).includes(exercise.id);
@@ -260,13 +263,16 @@ export const PatientExerciseView: React.FC = () => {
                   </p>
                 </div>
 
-                {/* Targeted Muscles Pills */}
+                {/* Target Muscle Areas */}
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    Targeted Areas:
+                    Prime Mover & Active Muscles:
                   </span>
                   <div className="flex flex-wrap gap-1.5">
-                    {exercise.targetMuscles.map((muscle, mIdx) => (
+                    <span className="text-xs bg-emerald-100 text-emerald-900 px-2.5 py-0.5 rounded-md font-bold border border-emerald-200">
+                      🎯 {exercise.primaryMover || exercise.targetMuscles[0]}
+                    </span>
+                    {exercise.targetMuscles.slice(1).map((muscle, mIdx) => (
                       <span key={mIdx} className="text-xs bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-md font-medium border border-slate-200">
                         {muscle}
                       </span>
@@ -274,19 +280,21 @@ export const PatientExerciseView: React.FC = () => {
                   </div>
                 </div>
 
-                {/* AI Visual Exercise Movement Diagram Card */}
+                {/* REALISTIC MULTI-FRAME HUMAN EXERCISE DEMONSTRATION DIAGRAM */}
                 {exercise.diagramSvg && (
-                  <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-2">
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-black uppercase tracking-wider text-teal-800 flex items-center gap-1">
                         <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-                        AI Biomechanical Movement Diagram
+                        Human Movement & Posture Demonstration
                       </span>
-                      <span className="text-[10px] text-slate-400 font-mono">Start ➔ Finish Flow</span>
+                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                        2–3 Sequence Frames
+                      </span>
                     </div>
 
-                    <div className="w-full bg-white rounded-xl p-3 border border-slate-200 flex items-center justify-center">
-                      <div dangerouslySetInnerHTML={{ __html: exercise.diagramSvg }} className="w-full max-w-sm flex items-center justify-center" />
+                    <div className="w-full bg-white rounded-xl p-2.5 border border-slate-200 flex items-center justify-center overflow-hidden">
+                      <div dangerouslySetInnerHTML={{ __html: exercise.diagramSvg }} className="w-full" />
                     </div>
                   </div>
                 )}
@@ -307,23 +315,26 @@ export const PatientExerciseView: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Snapshot Form & Breathing Note */}
+                {/* Snapshot Breathing & Cadence Note */}
                 <div className="text-xs bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-1">
                   <p className="text-[11px] text-slate-700 leading-relaxed">
-                    <strong className="text-slate-900">🌬️ Breathing:</strong> {exercise.breathingGuidance}
+                    <strong className="text-slate-900">🌬️ Breathing & Tempo:</strong> {exercise.breathingGuidance}
                   </p>
                 </div>
 
               </div>
 
-              {/* Card Footer: View Step-by-Step Instructions */}
+              {/* Card Footer: Open Full Guide */}
               <div className="p-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between gap-3">
                 <button
-                  onClick={() => setActiveExerciseModal(exercise)}
+                  onClick={() => {
+                    setActiveExerciseModal(exercise);
+                    setSelectedPhaseIndex(0);
+                  }}
                   className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors shadow-xs cursor-pointer"
                 >
                   <BookOpen className="w-4 h-4 text-teal-300" />
-                  View Full Step-by-Step Guide & Form Tips
+                  View Step-by-Step Biomechanics & Movement Sequence
                 </button>
               </div>
 
@@ -337,7 +348,7 @@ export const PatientExerciseView: React.FC = () => {
           ========================================================================= */}
       {activeExerciseModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[92vh] shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             
             {/* Modal Header */}
             <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-4 bg-gradient-to-r from-teal-50/60 to-white">
@@ -349,6 +360,11 @@ export const PatientExerciseView: React.FC = () => {
                   <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md">
                     ⏱️ {activeExerciseModal.recommendedDose.sets} Sets • {activeExerciseModal.recommendedDose.repsOrDuration}
                   </span>
+                  {activeExerciseModal.tempoGuidance && (
+                    <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
+                      Tempo: {activeExerciseModal.tempoGuidance}
+                    </span>
+                  )}
                 </div>
                 <h2 className="text-xl font-black text-slate-900">
                   {activeExerciseModal.name}
@@ -369,24 +385,99 @@ export const PatientExerciseView: React.FC = () => {
             {/* Modal Content */}
             <div className="p-6 overflow-y-auto space-y-6">
               
-              {/* AI Biomechanical Diagram in Full View */}
+              {/* Full Multi-Pose Human Exercise Biomechanical Diagram */}
               {activeExerciseModal.diagramSvg && (
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-                  <span className="text-[11px] font-black uppercase tracking-wider text-teal-800 flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-teal-600" />
-                    AI Visual Biomechanics & Movement Path
-                  </span>
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-center">
-                    <div dangerouslySetInnerHTML={{ __html: activeExerciseModal.diagramSvg }} className="w-full max-w-md" />
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-teal-800 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-teal-600" />
+                      Visual Human Movement Trajectory & Alignment Sequence
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      Start ➔ Path ➔ Peak Contraction
+                    </span>
+                  </div>
+
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-center overflow-x-auto">
+                    <div dangerouslySetInnerHTML={{ __html: activeExerciseModal.diagramSvg }} className="w-full min-w-[500px]" />
                   </div>
                 </div>
               )}
 
-              {/* Starting Position & Posture Check */}
+              {/* Interactive Multi-Pose Checkpoints (If Available) */}
+              {activeExerciseModal.sequenceFrames && activeExerciseModal.sequenceFrames.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                      <Layers className="w-4 h-4 text-teal-600" />
+                      Pose-by-Pose Movement Checkpoints:
+                    </h3>
+                    <span className="text-[10px] text-teal-700 font-bold">
+                      Click frame to inspect posture cues
+                    </span>
+                  </div>
+
+                  {/* Phase Tabs */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {activeExerciseModal.sequenceFrames.map((frame, fIdx) => (
+                      <button
+                        key={fIdx}
+                        onClick={() => setSelectedPhaseIndex(fIdx)}
+                        className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                          selectedPhaseIndex === fIdx
+                            ? 'bg-teal-900 text-white border-teal-950 shadow-xs ring-2 ring-teal-500/20'
+                            : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className={`text-[10px] font-black uppercase tracking-wider ${
+                            selectedPhaseIndex === fIdx ? 'text-emerald-300' : 'text-slate-500'
+                          }`}>
+                            Pose {frame.phaseNumber}
+                          </span>
+                          {selectedPhaseIndex === fIdx && (
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                          )}
+                        </div>
+                        <div className="text-xs font-bold truncate">
+                          {frame.phaseTitle.split(':')[1] || frame.phaseTitle}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Selected Phase Detail Box */}
+                  {activeExerciseModal.sequenceFrames[selectedPhaseIndex] && (
+                    <div className="p-4 bg-teal-50/70 border border-teal-200 rounded-2xl space-y-2 animate-in fade-in duration-150">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-teal-950">
+                          {activeExerciseModal.sequenceFrames[selectedPhaseIndex].phaseTitle}
+                        </span>
+                        <span className="text-[10px] font-bold text-teal-800 bg-white px-2 py-0.5 rounded-full border border-teal-200">
+                          {activeExerciseModal.sequenceFrames[selectedPhaseIndex].targetEngagement}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-700 font-medium">
+                        💡 <strong>Form Cue:</strong> {activeExerciseModal.sequenceFrames[selectedPhaseIndex].keyCue}
+                      </p>
+                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1 text-[11px] text-slate-600">
+                        {activeExerciseModal.sequenceFrames[selectedPhaseIndex].postureCheckpoints.map((cp, cpIdx) => (
+                          <li key={cpIdx} className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-teal-600 shrink-0" />
+                            <span>{cp}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Starting Position & Posture Setup */}
               <div className="space-y-2">
                 <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                   <Target className="w-4 h-4 text-teal-600" />
-                  1. Starting Position & Posture Setup:
+                  1. Starting Position & Joint Alignment:
                 </h3>
                 <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-700 leading-relaxed font-medium">
                   {activeExerciseModal.startingPosition}
@@ -405,9 +496,7 @@ export const PatientExerciseView: React.FC = () => {
                       <span className="w-6 h-6 rounded-full bg-teal-100 text-teal-900 font-black flex items-center justify-center shrink-0 text-xs">
                         {sIdx + 1}
                       </span>
-                      <p className="text-slate-700 leading-relaxed pt-0.5">
-                        {step}
-                      </p>
+                      <p className="text-slate-700 leading-relaxed pt-0.5" dangerouslySetInnerHTML={{ __html: step }} />
                     </div>
                   ))}
                 </div>
@@ -416,7 +505,8 @@ export const PatientExerciseView: React.FC = () => {
               {/* Breathing & Cadence Guide */}
               <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 space-y-1 text-xs text-emerald-950">
                 <strong className="flex items-center gap-1.5 text-emerald-900 font-bold">
-                  🌬️ Breathing & Timing Pattern:
+                  <Wind className="w-4 h-4 text-emerald-700" />
+                  Breathing & Cadence Pattern:
                 </strong>
                 <p className="text-[11px] leading-relaxed">
                   {activeExerciseModal.breathingGuidance}
