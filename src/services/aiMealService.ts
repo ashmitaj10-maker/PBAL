@@ -8,6 +8,7 @@ import {
   MealSlotType
 } from '../types/clinic';
 import { createDefaultChoiceSlots, createDefaultWeeklyDays, RECIPE_CATALOG } from '../data/mockMealAndAssessmentData';
+import { formatDate } from '../utils/dateUtils';
 
 export interface GeneratePlanOptions {
   patientId: string;
@@ -115,7 +116,7 @@ export async function generateClinicalMealPlan(options: GeneratePlanOptions): Pr
     clinicalRationale: rationale,
     createdBy: assessment.doctorName || 'Lead Dietitian',
     createdAt: new Date().toISOString(),
-    changeLog: [`v1 generated with AI Clinical Engine on ${new Date().toLocaleDateString()}`]
+    changeLog: [`v1 generated with AI Clinical Engine on ${formatDate(new Date())}`]
   };
 
   return newPlan;

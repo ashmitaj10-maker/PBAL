@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useClinic } from '../../context/ClinicContext';
 import { FoodPreference } from '../../types/clinic';
 import { calculateBmi } from '../../utils/nutritionCalculators';
+import { formatDateTime } from '../../utils/dateUtils';
 import { 
   X, 
   UserPlus, 
@@ -288,13 +289,7 @@ export const RegisterPatientModal: React.FC = () => {
   const handleSaveVoiceAudio = (dataUrl: string, durationSeconds: number) => {
     setVoiceAudioUrl(dataUrl);
     setVoiceAudioDuration(durationSeconds);
-    const dateStr = new Date().toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const dateStr = formatDateTime(new Date());
     setVoiceAudioDate(dateStr);
   };
 

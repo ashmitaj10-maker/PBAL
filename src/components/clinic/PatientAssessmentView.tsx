@@ -25,6 +25,7 @@ import {
 import { PatientAssessment, FoodPreference } from '../../types/clinic';
 import { generateClinicalMealPlan } from '../../services/aiMealService';
 import { PatientSelector } from './PatientSelector';
+import { formatDate } from '../../utils/dateUtils';
 
 export const PatientAssessmentView: React.FC = () => {
   const { 
@@ -832,7 +833,7 @@ export const PatientAssessmentView: React.FC = () => {
                 >
                   <div>
                     <div className="font-semibold text-[#183153]">
-                      Version {a.version} • {new Date(a.createdAt).toLocaleDateString()}
+                      Version {a.version} • {formatDate(a.createdAt)}
                     </div>
                     <div className="text-[11px] text-slate-500">
                       {a.targetCalories} kcal • {a.foodPreference}

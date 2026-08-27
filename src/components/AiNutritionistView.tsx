@@ -14,6 +14,7 @@ import {
 import { useNutrition } from '../context/NutritionContext';
 import { chatNutritionistApi } from '../services/api';
 import { ChatMessage } from '../types';
+import { formatDateTime } from '../utils/dateUtils';
 
 export const AiNutritionistView: React.FC = () => {
   const { profile, chatMessages, addChatMessage } = useNutrition();
@@ -171,8 +172,8 @@ export const AiNutritionistView: React.FC = () => {
                   {/* Audio Read-aloud button for Assistant */}
                   {!isUser && (
                     <div className="flex items-center justify-between pt-1">
-                      <span className="text-[10px] text-slate-400">
-                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {formatDateTime(msg.timestamp)}
                       </span>
                       <button
                         onClick={() => handleToggleSpeech(msg.id, msg.text)}

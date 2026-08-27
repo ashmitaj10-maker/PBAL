@@ -34,6 +34,7 @@ import {
   CRAVING_KNOWLEDGE_BASE
 } from '../../data/foodSwapsGenerator';
 import { PatientSelector } from './PatientSelector';
+import { formatDate } from '../../utils/dateUtils';
 
 type CopilotTab = 'food_swaps' | 'nutrient_gaps' | 'motivation' | 'soap_summary';
 
@@ -1096,8 +1097,8 @@ export const AiCopilotView: React.FC = () => {
                       </div>
                     </div>
 
-                    <span className="text-[10px] font-bold text-amber-800 bg-amber-200/80 px-2.5 py-0.5 rounded-full">
-                      📅 {currentPatient.dailyMotivationMessage.date ? `Assigned ${currentPatient.dailyMotivationMessage.date}` : 'Today\'s Focus'}
+                    <span className="text-[10px] font-bold text-amber-800 bg-amber-200/80 px-2.5 py-0.5 rounded-full font-mono">
+                      📅 {currentPatient.dailyMotivationMessage.date ? `Assigned ${formatDate(currentPatient.dailyMotivationMessage.date)}` : 'Today\'s Focus'}
                     </span>
                   </div>
 

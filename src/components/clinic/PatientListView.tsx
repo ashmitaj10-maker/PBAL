@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useClinic } from '../../context/ClinicContext';
 import { Patient, FoodPreference, PatientStatus } from '../../types/clinic';
 import { calculateBmi } from '../../utils/nutritionCalculators';
+import { formatDate } from '../../utils/dateUtils';
 import { 
   Users, 
   Search, 
@@ -117,7 +118,7 @@ export const PatientListView: React.FC = () => {
         `"${(p.medicalConditions || []).join(', ')}"`,
         `"${p.assignedPlanName || 'Standard'}"`,
         p.status,
-        p.renewalDate
+        p.renewalDate ? formatDate(p.renewalDate) : ''
       ];
     });
 
@@ -125,7 +126,7 @@ export const PatientListView: React.FC = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `PBL_Patients_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `PBL_Patients_Export_${formatDate(new Date())}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

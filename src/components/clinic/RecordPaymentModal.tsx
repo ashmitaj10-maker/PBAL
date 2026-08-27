@@ -323,22 +323,22 @@ export const RecordPaymentModal: React.FC = () => {
           {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Payment Date</label>
+              <label className="block font-semibold text-slate-700 mb-1 text-xs">Payment Date (DD-MM-YYYY)</label>
               <input
                 type="date"
                 value={paymentDate}
                 onChange={(e) => setPaymentDate(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[#183153] outline-none"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[#183153] outline-none text-xs"
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Balance Due Date</label>
+              <label className="block font-semibold text-slate-700 mb-1 text-xs">Balance Due Date (DD-MM-YYYY)</label>
               <input
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[#183153] outline-none"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[#183153] outline-none text-xs"
               />
             </div>
           </div>

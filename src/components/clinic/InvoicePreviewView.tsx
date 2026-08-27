@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useClinic } from '../../context/ClinicContext';
 import { Invoice } from '../../types/clinic';
+import { formatDate } from '../../utils/dateUtils';
 import { 
   Printer, 
   Download, 
@@ -190,10 +191,10 @@ export const InvoicePreviewView: React.FC = () => {
               {invoice.invoiceNumber}
             </div>
             <div className="text-xs text-slate-500 mt-1">
-              Issue Date: <strong className="text-[#183153]">{invoice.issueDate}</strong>
+              Issue Date: <strong className="text-[#183153] font-mono">{formatDate(invoice.issueDate)}</strong>
             </div>
             <div className="text-xs text-slate-500 mt-0.5">
-              Due Date: <strong className="text-[#183153]">{invoice.dueDate}</strong>
+              Due Date: <strong className="text-[#183153] font-mono">{formatDate(invoice.dueDate)}</strong>
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useClinic } from '../../context/ClinicContext';
 import { PaymentRecord, PaymentStatus, PaymentMode, ClinicPlan } from '../../types/clinic';
+import { formatDate } from '../../utils/dateUtils';
 import { 
   CreditCard, 
   PlusCircle, 
@@ -59,7 +60,7 @@ export const PaymentManagementView: React.FC = () => {
     const headers = ['Receipt / Txn Ref', 'Date', 'Patient Name', 'Plan Name', 'Base Price', 'Discount', 'Tax (GST)', 'Total Amount', 'Paid Amount', 'Pending Balance', 'Mode', 'Status'];
     const rows = (filteredPayments || []).map(p => [
       p.transactionRef || 'TXN',
-      p.paymentDate || '',
+      p.paymentDate ? formatDate(p.paymentDate) : '',
       `"${p.patientName || 'Patient'}"`,
       `"${p.planName || 'Plan'}"`,
       p.basePrice || 0,
@@ -76,7 +77,7 @@ export const PaymentManagementView: React.FC = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `PBL_Payment_Ledger_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `PBL_Payment_Ledger_${formatDate(new Date())}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -272,7 +273,7 @@ export const PaymentManagementView: React.FC = () => {
                       return (
                         <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
                           <td className="py-3.5 px-4">
-                            <div className="font-semibold text-[#183153]">{p.paymentDate}</div>
+                            <div className="font-semibold text-[#183153] font-mono">{formatDate(p.paymentDate)}</div>
                             <div className="font-mono text-[10px] text-slate-400">{p.transactionRef || 'N/A'}</div>
                           </td>
 

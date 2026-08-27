@@ -28,6 +28,7 @@ import {
   Stethoscope
 } from 'lucide-react';
 import { calculateBmi } from '../../utils/nutritionCalculators';
+import { formatDate } from '../../utils/dateUtils';
 import { PatientSelector } from './PatientSelector';
 
 export const PatientMobileHomeView: React.FC = () => {
@@ -536,7 +537,7 @@ export const PatientMobileHomeView: React.FC = () => {
               <div className="space-y-2 pt-1">
                 {(weightHistory || []).slice(-4).map((w, idx) => (
                   <div key={w.id || idx} className="flex items-center justify-between text-xs p-2 rounded-xl bg-slate-50 border border-slate-100">
-                    <span className="font-medium text-slate-600">{new Date(w.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                    <span className="font-medium text-slate-600 font-mono">{formatDate(w.date)}</span>
                     <span className="font-mono font-bold text-[#183153]">{w.weightKg} kg</span>
                     <span className="text-[11px] text-slate-500 font-mono">BMI {w.bmi}</span>
                   </div>

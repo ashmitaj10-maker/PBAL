@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { BodyMeasurementsRecord } from '../../types/clinic';
 import { PatientSelector } from './PatientSelector';
+import { formatDate } from '../../utils/dateUtils';
 
 type MetricTab = 'weight_bmi' | 'waist_hip' | 'arms_chest' | 'all';
 type DateFilter = '30d' | '90d' | '180d' | 'all';
@@ -371,7 +372,7 @@ export const ProgressDashboardView: React.FC = () => {
               <span className="text-slate-600 flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-teal-600" />
                 {selectedPointIndex !== null 
-                  ? `Selected Log: ${chartData[selectedPointIndex]?.date}` 
+                  ? `Selected Log: ${formatDate(chartData[selectedPointIndex]?.date)}` 
                   : `Showing ${chartData.length} records (${dateFilter.toUpperCase()})`}
               </span>
               <span className="font-bold text-slate-800">
@@ -380,7 +381,7 @@ export const ProgressDashboardView: React.FC = () => {
                     Weight: {chartData[selectedPointIndex]?.weightKg}kg • Waist: {chartData[selectedPointIndex]?.waistInches}&quot; • BMI: {chartData[selectedPointIndex]?.bmi}
                   </span>
                 ) : (
-                  <span>Net Trajectory: -{totalWeightLoss} kg ({(((totalWeightLoss) / (initialMeas.weightKg || 1)) * 100).toFixed(1)}% body mass reduction)</span>
+                  <span>Net Trajectory: -{totalWeightLoss} kg ({(((totalWeightLoss || 0) / (initialMeas.weightKg || 1)) * 100).toFixed(1)}% body mass reduction)</span>
                 )}
               </span>
             </div>
@@ -453,7 +454,7 @@ export const ProgressDashboardView: React.FC = () => {
                         fill="#64748b"
                         fontWeight={isSelected ? 'bold' : 'normal'}
                       >
-                        {record.date.slice(5)}
+                        {formatDate(record.date)}
                       </text>
                       {/* Value tag above point */}
                       <text 
@@ -683,7 +684,7 @@ export const ProgressDashboardView: React.FC = () => {
                   : null;
                 return (
                   <tr key={m.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{m.date}</td>
+                    <td className="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{formatDate(m.date)}</td>
                     <td className="px-4 py-3 font-bold text-slate-900 whitespace-nowrap">
                       {m.weightKg !== undefined ? `${m.weightKg} kg` : '—'}
                       {weightDiff !== null && Number(weightDiff) !== 0 && (

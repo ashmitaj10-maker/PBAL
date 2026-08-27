@@ -38,6 +38,7 @@ import {
   DayMealPlan 
 } from '../../types/clinic';
 import { regenerateSingleMealSlot, generateClinicalMealPlan } from '../../services/aiMealService';
+import { formatDateTime } from '../../utils/dateUtils';
 import { PatientSelector } from './PatientSelector';
 import { RECIPE_CATALOG } from '../../data/mockMealAndAssessmentData';
 
@@ -196,7 +197,7 @@ export const AiMealBuilderView: React.FC = () => {
         weeklyDays: currentMode === 'weekly' 
           ? (activePlan.weeklyDays?.map((d, i) => i === selectedDayIndex ? { ...d, slots: updatedSlots } : d) || [])
           : activePlan.weeklyDays,
-        changeLog: [...(activePlan.changeLog || []), `Regenerated slot ${slotType} via AI Engine on ${new Date().toLocaleTimeString()}`]
+        changeLog: [...(activePlan.changeLog || []), `Regenerated slot ${slotType} via AI Engine on ${formatDateTime(new Date())}`]
       };
 
       saveMealPlan(updatedPlan);

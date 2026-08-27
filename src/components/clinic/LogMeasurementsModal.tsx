@@ -161,7 +161,7 @@ export const LogMeasurementsModal: React.FC = () => {
               />
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Measurement Date</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Measurement Date (DD-MM-YYYY)</label>
                 <div className="relative">
                   <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                   <input

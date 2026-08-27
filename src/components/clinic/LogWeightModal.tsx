@@ -171,7 +171,7 @@ export const LogWeightModal: React.FC = () => {
           {/* Date */}
           <div>
             <label className="block font-semibold text-slate-700 mb-1">
-              Date of Weigh-In
+              Date of Weigh-In (DD-MM-YYYY)
             </label>
             <input
               type="date"

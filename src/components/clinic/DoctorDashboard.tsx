@@ -41,6 +41,7 @@ import {
   Pie, 
   Cell 
 } from 'recharts';
+import { formatDate } from '../../utils/dateUtils';
 import { IssuePatientCodeModal } from './IssuePatientCodeModal';
 
 export const DoctorDashboard: React.FC = () => {
@@ -97,14 +98,14 @@ export const DoctorDashboard: React.FC = () => {
       p.foodPreference || '',
       `"${p.assignedPlanName || 'Standard'}"`,
       p.status || '',
-      p.renewalDate || ''
+      p.renewalDate ? formatDate(p.renewalDate) : ''
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `PBL_Clinic_Roster_${currentClinic?.code || 'PBL'}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `PBL_Clinic_Roster_${currentClinic?.code || 'PBL'}_${formatDate(new Date())}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -404,7 +405,7 @@ export const DoctorDashboard: React.FC = () => {
                   <div>
                     <div className="font-bold text-slate-900">{item.patientName}</div>
                     <div className="text-[11px] text-slate-500">
-                      Last: {item.lastRecordedWeightKg}kg ({item.lastLoggedDate})
+                      Last: {item.lastRecordedWeightKg}kg ({formatDate(item.lastLoggedDate)})
                     </div>
                   </div>
 
@@ -567,7 +568,7 @@ export const DoctorDashboard: React.FC = () => {
                   <div>
                     <div className="font-bold text-slate-900">{exp.patientName}</div>
                     <div className="text-[11px] text-slate-500">
-                      {exp.planName} • Expiring in {exp.daysRemaining} days ({exp.expiryDate})
+                      {exp.planName} • Expiring in {exp.daysRemaining} days ({formatDate(exp.expiryDate)})
                     </div>
                   </div>
 

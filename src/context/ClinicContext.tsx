@@ -65,6 +65,7 @@ import {
   MOCK_EXPIRING_PLANS
 } from '../data/mockEngagementData';
 import { calculateBmi } from '../utils/nutritionCalculators';
+import { formatDate, formatDateTime } from '../utils/dateUtils';
 
 export type ClinicScreen = 
   | 'login'
@@ -1097,7 +1098,7 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       consultationNotes: input.consultationNotes || input.notes,
       voiceAudioUrl: input.voiceAudioUrl,
       voiceAudioDuration: input.voiceAudioDuration,
-      voiceAudioDate: input.voiceAudioDate || (input.voiceAudioUrl ? new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : undefined),
+      voiceAudioDate: input.voiceAudioDate || (input.voiceAudioUrl ? formatDateTime(new Date()) : undefined),
       voiceTranscript: input.voiceTranscript
     };
 
@@ -1151,7 +1152,7 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       consultationNotes: input.consultationNotes || input.notes,
       voiceAudioUrl: input.voiceAudioUrl,
       voiceAudioDuration: input.voiceAudioDuration,
-      voiceAudioDate: input.voiceAudioDate || (input.voiceAudioUrl ? new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : undefined),
+      voiceAudioDate: input.voiceAudioDate || (input.voiceAudioUrl ? formatDateTime(new Date()) : undefined),
       voiceTranscript: input.voiceTranscript
     };
     setAllAssessments(prev => [initialAssessment, ...prev]);
@@ -1508,7 +1509,7 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           ...p,
           status: 'published',
           publishedAt: new Date().toISOString(),
-          changeLog: [...(p.changeLog || []), `Published to patient app on ${new Date().toLocaleDateString()}`]
+          changeLog: [...(p.changeLog || []), `Published to patient app on ${formatDate(new Date())}`]
         };
       }
       return p;

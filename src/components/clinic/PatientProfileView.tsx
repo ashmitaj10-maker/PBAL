@@ -46,6 +46,7 @@ import {
   ResponsiveContainer,
   ReferenceLine
 } from 'recharts';
+import { formatDate, formatDateTime } from '../../utils/dateUtils';
 import { VoiceRecorderAndPlayer } from './VoiceRecorderAndPlayer';
 import { PatientSelector } from './PatientSelector';
 
@@ -122,13 +123,7 @@ export const PatientProfileView: React.FC = () => {
 
   const handleSavePatientAudio = (audioUrl: string, durationSeconds: number) => {
     if (isPatientSession) return;
-    const dateStr = new Date().toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const dateStr = formatDateTime(new Date());
     updatePatient(patient.id, {
       voiceAudioUrl: audioUrl,
       voiceAudioDuration: durationSeconds,
@@ -288,7 +283,7 @@ export const PatientProfileView: React.FC = () => {
                   <Mail className="w-3.5 h-3.5 text-[#6BBF59]" /> {patient.email}
                 </span>
                 <span>• {patient.age} yrs • {patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)}</span>
-                <span>• Joined {patient.joiningDate}</span>
+                <span>• Joined {formatDate(patient.joiningDate)}</span>
               </div>
             </div>
           </div>
@@ -711,9 +706,9 @@ export const PatientProfileView: React.FC = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                  <XAxis dataKey="date" tickFormatter={(val) => formatDate(val)} tick={{ fontSize: 11 }} />
                   <YAxis domain={['dataMin - 2', 'dataMax + 2']} tick={{ fontSize: 11 }} />
-                  <Tooltip />
+                  <Tooltip labelFormatter={(val) => formatDate(val)} />
                   <ReferenceLine y={patient.targetWeightKg} stroke="#EF4444" strokeDasharray="4 4" label={{ value: `Target: ${patient.targetWeightKg}kg`, fill: '#EF4444', fontSize: 10 }} />
                   <Line type="monotone" dataKey="weight" stroke="#6BBF59" strokeWidth={3} dot={{ r: 4, fill: '#183153' }} />
                 </LineChart>
@@ -752,7 +747,7 @@ export const PatientProfileView: React.FC = () => {
                 >
                   <div>
                     <span className="font-bold text-[#183153]">{inv.invoiceNumber}</span>
-                    <span className="text-slate-500 ml-2 font-mono">{inv.issueDate}</span>
+                    <span className="text-slate-500 ml-2 font-mono">{formatDate(inv.issueDate)}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-mono font-bold text-[#183153]">{currentClinic?.currencySymbol || '₹'}{(inv.grandTotal || 0).toLocaleString()}</span>

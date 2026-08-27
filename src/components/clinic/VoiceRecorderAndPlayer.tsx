@@ -16,6 +16,7 @@ import {
   Plus
 } from 'lucide-react';
 import { formatAudioDuration, blobToDataUrl } from '../../utils/audioUtils';
+import { formatDateTime } from '../../utils/dateUtils';
 
 interface VoiceRecorderAndPlayerProps {
   audioUrl?: string;
@@ -293,8 +294,8 @@ export const VoiceRecorderAndPlayer: React.FC<VoiceRecorderAndPlayerProps> = ({
         {audioUrl && !isRecording && (
           <div className="flex items-center gap-2">
             {audioDate && (
-              <span className="text-[10px] text-slate-400 hidden sm:inline-block">
-                {audioDate}
+              <span className="text-[10px] text-slate-400 hidden sm:inline-block font-mono">
+                {formatDateTime(audioDate)}
               </span>
             )}
             <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60 flex items-center gap-1">

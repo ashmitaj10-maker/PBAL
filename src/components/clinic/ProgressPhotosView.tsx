@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { PhotoAngle, PhotoStage, ProgressPhoto } from '../../types/clinic';
 import { PatientSelector } from './PatientSelector';
+import { formatDate } from '../../utils/dateUtils';
 
 export const ProgressPhotosView: React.FC = () => {
   const { 
@@ -137,7 +138,7 @@ export const ProgressPhotosView: React.FC = () => {
                 >
                   {(allPatientPhotos || []).map(p => (
                     <option key={p.id} value={p.id}>
-                      {p.stage.toUpperCase()} • {p.date} ({p.weightKg}kg)
+                      {p.stage.toUpperCase()} • {formatDate(p.date)} ({p.weightKg}kg)
                     </option>
                   ))}
                 </select>
@@ -152,7 +153,7 @@ export const ProgressPhotosView: React.FC = () => {
                 >
                   {(allPatientPhotos || []).map(p => (
                     <option key={p.id} value={p.id}>
-                      {p.stage.toUpperCase()} • {p.date} ({p.weightKg}kg)
+                      {p.stage.toUpperCase()} • {formatDate(p.date)} ({p.weightKg}kg)
                     </option>
                   ))}
                 </select>
@@ -195,7 +196,7 @@ export const ProgressPhotosView: React.FC = () => {
               className="absolute inset-0 w-full h-full object-cover"
             />
             <div className="absolute top-4 right-4 bg-teal-900/90 text-teal-100 text-xs font-bold px-3 py-1.5 rounded-xl shadow backdrop-blur-sm border border-teal-400/40">
-              {afterPhoto.stage.toUpperCase()}: {afterPhoto.weightKg} kg • {afterPhoto.waistInches}&quot; ({afterPhoto.date})
+              {afterPhoto.stage.toUpperCase()}: {afterPhoto.weightKg} kg • {afterPhoto.waistInches}&quot; ({formatDate(afterPhoto.date)})
             </div>
 
             {/* Before Image (Clipped Left Side) */}
@@ -210,7 +211,7 @@ export const ProgressPhotosView: React.FC = () => {
                 style={{ width: '100%', maxWidth: 'none', objectFit: 'cover' }}
               />
               <div className="absolute top-4 left-4 bg-slate-900/90 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow backdrop-blur-sm border border-white/20">
-                {beforePhoto.stage.toUpperCase()}: {beforePhoto.weightKg} kg • {beforePhoto.waistInches}&quot; ({beforePhoto.date})
+                {beforePhoto.stage.toUpperCase()}: {beforePhoto.weightKg} kg • {beforePhoto.waistInches}&quot; ({formatDate(beforePhoto.date)})
               </div>
             </div>
 
@@ -338,7 +339,7 @@ export const ProgressPhotosView: React.FC = () => {
                 <div className="p-3.5 space-y-2">
                   <div className="flex items-center justify-between text-xs text-slate-500">
                     <span className="flex items-center gap-1 font-medium">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400" /> {photo.date}
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" /> {formatDate(photo.date)}
                     </span>
                     {photo.verifiedByDoctor && (
                       <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded flex items-center gap-0.5">
@@ -396,7 +397,7 @@ export const ProgressPhotosView: React.FC = () => {
                 <span className="text-xs font-bold uppercase tracking-wider text-teal-400">
                   {previewPhoto.stage.toUpperCase()} • {previewPhoto.angle.toUpperCase()} VIEW
                 </span>
-                <span className="text-xs text-slate-400">{previewPhoto.date}</span>
+                <span className="text-xs text-slate-400">{formatDate(previewPhoto.date)}</span>
               </div>
               <div className="flex items-center gap-4 text-sm font-bold">
                 <span>Weight: {previewPhoto.weightKg} kg</span>
