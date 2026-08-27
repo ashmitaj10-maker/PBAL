@@ -105,3 +105,80 @@ export function displayToIso(displayDate: string): string {
 export function isoToDisplay(isoDate: string): string {
   return formatDate(isoDate);
 }
+
+/**
+ * Adds a number of days to a given date string or Date object.
+ */
+export function addDays(dateInput: string | Date, days: number): Date {
+  let baseDate: Date;
+  if (typeof dateInput === 'string') {
+    if (/^\d{2}-\d{2}-\d{4}$/.test(dateInput.trim())) {
+      const [d, m, y] = dateInput.trim().split('-');
+      baseDate = new Date(Number(y), Number(m) - 1, Number(d));
+    } else {
+      baseDate = new Date(dateInput);
+    }
+  } else {
+    baseDate = new Date(dateInput.getTime());
+  }
+
+  const result = new Date(baseDate.getTime());
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+/**
+ * Calculates plan end date given start date and duration in days.
+ * For example: Start = Thursday, duration = 7 days -> End = Wednesday (Start + 6 days).
+ * Returns date in YYYY-MM-DD format.
+ */
+export function calculatePlanEndDateIso(startDateInput: string | Date, durationDays: number = 7): string {
+  const endDate = addDays(startDateInput, Math.max(0, durationDays - 1));
+  const day = String(endDate.getDate()).padStart(2, '0');
+  const month = String(endDate.getMonth() + 1).padStart(2, '0');
+  const year = endDate.getFullYear();
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Calculates plan end date in DD-MM-YYYY format.
+ */
+export function calculatePlanEndDateDisplay(startDateInput: string | Date, durationDays: number = 7): string {
+  return formatDate(calculatePlanEndDateIso(startDateInput, durationDays));
+}
+
+/**
+ * Returns difference in calendar days between two dates (toDate - fromDate).
+ * Returns 1 if toDate is tomorrow, 0 if today, negative if in the past.
+ */
+export function getDaysDifference(fromDateInput: string | Date, toDateInput: string | Date): number {
+  const parseToMidnight = (input: string | Date): number => {
+    let d: Date;
+    if (typeof input === 'string' && /^\d{2}-\d{2}-\d{4}$/.test(input.trim())) {
+      const [day, month, year] = input.trim().split('-');
+      d = new Date(Number(year), Number(month) - 1, Number(day));
+    } else {
+      d = new Date(input);
+    }
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  };
+
+  const ms1 = parseToMidnight(fromDateInput);
+  const ms2 = parseToMidnight(toDateInput);
+  return Math.round((ms2 - ms1) / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Returns true if the target date is tomorrow relative to today.
+ */
+export function isTomorrow(targetDateInput: string | Date): boolean {
+  return getDaysDifference(new Date(), targetDateInput) === 1;
+}
+
+/**
+ * Returns true if the target date is today.
+ */
+export function isToday(targetDateInput: string | Date): boolean {
+  return getDaysDifference(new Date(), targetDateInput) === 0;
+}
+

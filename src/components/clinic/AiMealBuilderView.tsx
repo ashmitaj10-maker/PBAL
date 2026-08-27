@@ -34,7 +34,8 @@ import {
   X,
   Search,
   CheckCheck,
-  AlertCircle
+  AlertCircle,
+  Bell
 } from 'lucide-react';
 import { 
   MealPlanMode, 
@@ -45,7 +46,17 @@ import {
   DayMealPlan 
 } from '../../types/clinic';
 import { regenerateSingleMealSlot, generateClinicalMealPlan } from '../../services/aiMealService';
-import { formatDateTime } from '../../utils/dateUtils';
+import { 
+  formatDate, 
+  formatDateTime, 
+  calculatePlanEndDateIso, 
+  calculatePlanEndDateDisplay, 
+  isTomorrow, 
+  isToday, 
+  getDaysDifference, 
+  addDays, 
+  getTodayIso 
+} from '../../utils/dateUtils';
 import { PatientSelector } from './PatientSelector';
 import { RECIPE_CATALOG } from '../../data/mockMealAndAssessmentData';
 
@@ -646,6 +657,25 @@ export const AiMealBuilderView: React.FC = () => {
     setTimeout(() => setSaveSuccessMsg(null), 3000);
   };
 
+  // -------------------------------------------------------------
+  // 9. UPDATE PLAN START DATE & DURATION SCHEDULE
+  // -------------------------------------------------------------
+  const handleUpdatePlanSchedule = (newStartDate: string, newDuration: number, newCycle: number = 1) => {
+    const calcEndDate = calculatePlanEndDateIso(newStartDate, newDuration);
+    const updatedPlan: ClinicalMealPlan = {
+      ...activePlan,
+      startDate: newStartDate,
+      durationDays: newDuration,
+      endDate: calcEndDate,
+      cycleNumber: newCycle,
+      changeLog: [...(activePlan.changeLog || []), `Plan schedule updated: Starts ${formatDate(newStartDate)} (${newDuration} days) on ${formatDateTime(new Date())}`]
+    };
+
+    saveMealPlan(updatedPlan);
+    setSaveSuccessMsg(`Plan schedule updated! Starts: ${formatDate(newStartDate)} • Active Period: ${formatDate(newStartDate)} → ${formatDate(calcEndDate)} (${newDuration} Days)`);
+    setTimeout(() => setSaveSuccessMsg(null), 4000);
+  };
+
   // Publish Plan to Patient App
   const handlePublish = () => {
     publishMealPlan(activePlan.id);
@@ -761,6 +791,134 @@ export const AiMealBuilderView: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* =========================================================================
+            PLAN START DATE & SCHEDULE SELECTOR (DIETITIAN EXPLICIT CONTROL)
+            ========================================================================= */}
+        <div className="bg-gradient-to-r from-teal-50/70 via-emerald-50/40 to-slate-50 border border-teal-200/80 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-teal-600 text-white rounded-xl shadow-xs shrink-0">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-bold text-[#183153] uppercase tracking-wider">
+                  Plan Schedule & Active Period
+                </h3>
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-200">
+                  Cycle {activePlan.cycleNumber || 1}
+                </span>
+                {isTomorrow(activePlan.startDate || '2026-08-28') && (
+                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase flex items-center gap-1 ${
+                    activePlan.status === 'published' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse'
+                  }`}>
+                    <Bell className="w-3 h-3 text-amber-600" />
+                    Starts Tomorrow
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-600 mt-1">
+                Active Period: <strong className="text-slate-900 font-mono">{formatDate(activePlan.startDate || '2026-08-28')}</strong> ➔ <strong className="text-slate-900 font-mono">{formatDate(activePlan.endDate || calculatePlanEndDateIso(activePlan.startDate || '2026-08-28', activePlan.durationDays || 7))}</strong> ({activePlan.durationDays || 7} Days)
+              </p>
+            </div>
+          </div>
+
+          {/* Schedule Controls */}
+          <div className="flex items-center flex-wrap gap-3">
+            {/* Start Date Picker */}
+            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
+              <label htmlFor="plan-start-date" className="text-xs font-bold text-slate-700">Start Date:</label>
+              <input
+                id="plan-start-date"
+                type="date"
+                value={activePlan.startDate || '2026-08-28'}
+                onChange={(e) => handleUpdatePlanSchedule(e.target.value, activePlan.durationDays || 7, activePlan.cycleNumber || 1)}
+                className="text-xs font-bold text-teal-900 font-mono bg-transparent outline-none cursor-pointer"
+              />
+              <span className="text-[11px] font-bold font-mono text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                {formatDate(activePlan.startDate || '2026-08-28')}
+              </span>
+            </div>
+
+            {/* Duration Selector */}
+            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
+              <label htmlFor="plan-duration" className="text-xs font-bold text-slate-700">Duration:</label>
+              <select
+                id="plan-duration"
+                value={activePlan.durationDays || 7}
+                onChange={(e) => handleUpdatePlanSchedule(activePlan.startDate || '2026-08-28', Number(e.target.value), activePlan.cycleNumber || 1)}
+                className="text-xs font-bold text-[#183153] bg-transparent outline-none cursor-pointer pr-1"
+              >
+                <option value={7}>7 Days (1 Week)</option>
+                <option value={14}>14 Days (2 Weeks)</option>
+                <option value={21}>21 Days (3 Weeks)</option>
+                <option value={28}>28 Days (4 Weeks)</option>
+                <option value={30}>30 Days (1 Month)</option>
+              </select>
+            </div>
+
+            {/* Cycle Number */}
+            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
+              <label htmlFor="plan-cycle" className="text-xs font-bold text-slate-700">Cycle:</label>
+              <select
+                id="plan-cycle"
+                value={activePlan.cycleNumber || 1}
+                onChange={(e) => handleUpdatePlanSchedule(activePlan.startDate || '2026-08-28', activePlan.durationDays || 7, Number(e.target.value))}
+                className="text-xs font-bold text-[#183153] bg-transparent outline-none cursor-pointer"
+              >
+                <option value={1}>Week 1</option>
+                <option value={2}>Week 2</option>
+                <option value={3}>Week 3</option>
+                <option value={4}>Week 4</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Dietitian-Only Reminder Alert Banner */}
+        {isTomorrow(activePlan.startDate || '2026-08-28') && (
+          <div className={`p-3.5 rounded-2xl border flex items-start gap-3 shadow-2xs ${
+            activePlan.status === 'published'
+              ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
+              : 'bg-amber-50/90 border-amber-300 text-amber-950 ring-1 ring-amber-300'
+          }`}>
+            <div className={`p-2 rounded-xl shrink-0 ${activePlan.status === 'published' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-200 text-amber-900'}`}>
+              <Bell className="w-4 h-4" />
+            </div>
+            <div className="flex-1 text-xs">
+              <div className="flex items-center gap-2">
+                <strong className="font-bold text-sm">
+                  {activePlan.status === 'published'
+                    ? 'Diet Plan Starts Tomorrow (Plan Ready)'
+                    : 'Diet Plan Reminder (Action Required)'}
+                </strong>
+                <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${
+                  activePlan.status === 'published' ? 'bg-emerald-200 text-emerald-900' : 'bg-amber-200 text-amber-950'
+                }`}>
+                  {activePlan.status === 'published' ? '✓ Finalized' : '⚠️ Draft Pending'}
+                </span>
+                <span className="text-[11px] text-slate-500 ml-auto font-medium">
+                  🔒 Dietitian Workflow Notice (Hidden from Patient)
+                </span>
+              </div>
+              <p className="mt-1 leading-relaxed text-slate-700">
+                {patient.name}'s {activePlan.durationDays || 7}-day diet plan starts tomorrow ({formatDate(activePlan.startDate)}). {
+                  activePlan.status === 'published'
+                    ? 'The plan is finalized and will be active for the patient tomorrow morning.'
+                    : 'Make sure their 7-day plan is customized and published before tomorrow.'
+                }
+              </p>
+            </div>
+            {activePlan.status !== 'published' && (
+              <button
+                onClick={handlePublish}
+                className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs shrink-0 cursor-pointer transition-all"
+              >
+                Finalize & Publish Now
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Mode Selector Tabs & Day Selector */}
         <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-100">

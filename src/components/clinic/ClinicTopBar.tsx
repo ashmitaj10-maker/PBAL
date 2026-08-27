@@ -14,6 +14,8 @@ import {
   CheckCircle2
 } from 'lucide-react';
 
+import { formatDate } from '../../utils/dateUtils';
+
 interface ClinicTopBarProps {
   onOpenMobileSidebar: () => void;
   isCollapsed: boolean;
@@ -31,11 +33,15 @@ export const ClinicTopBar: React.FC<ClinicTopBarProps> = ({
     currentUser,
     setIsRegisterModalOpen,
     setIsPaymentModalOpen,
-    getDashboardKpis
+    getDashboardKpis,
+    dietitianNotifications,
+    markDietitianNotificationAsRead,
+    markAllDietitianNotificationsAsRead
   } = useClinic();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{ id: string; name: string; patientCode: string; mobile: string }[]>([]);
+  const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState(false);
 
   const kpis = getDashboardKpis();
 
@@ -160,7 +166,7 @@ export const ClinicTopBar: React.FC<ClinicTopBarProps> = ({
             )}
           </div>
 
-          {/* Quick Chat / Reminder Indicators */}
+          {/* Quick Chat */}
           <button
             onClick={() => navigateTo('patient_chat', { patientId: selectedPatient?.id })}
             className="relative p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
@@ -174,14 +180,108 @@ export const ClinicTopBar: React.FC<ClinicTopBarProps> = ({
             )}
           </button>
 
-          <button
-            onClick={() => navigateTo('reminder_settings', { patientId: selectedPatient?.id })}
-            className="relative p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer hidden sm:block"
-            title="Automated Reminders"
-          >
-            <Bell className="w-4 h-4 text-slate-600" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-teal-500 rounded-full" />
-          </button>
+          {/* Dietitian Clinical Notifications & Diet Plan Reminders Popover */}
+          <div className="relative">
+            <button
+              onClick={() => setIsNotifDropdownOpen(!isNotifDropdownOpen)}
+              className="relative p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Dietitian Notifications & Diet Plan Reminders"
+            >
+              <Bell className="w-4 h-4 text-slate-600" />
+              {kpis.dietitianReminderCount > 0 ? (
+                <span className="absolute top-1 right-1 px-1 min-w-4 h-4 bg-amber-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                  {kpis.dietitianReminderCount}
+                </span>
+              ) : (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-teal-500 rounded-full" />
+              )}
+            </button>
+
+            {isNotifDropdownOpen && (
+              <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="px-4 pb-2.5 border-b border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-teal-600" />
+                    <h3 className="text-xs font-bold text-slate-900">Clinical Reminders</h3>
+                    {kpis.dietitianReminderCount > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900">
+                        {kpis.dietitianReminderCount} new
+                      </span>
+                    )}
+                  </div>
+                  {dietitianNotifications.length > 0 && (
+                    <button
+                      onClick={markAllDietitianNotificationsAsRead}
+                      className="text-[10px] font-bold text-teal-700 hover:text-teal-800 hover:underline cursor-pointer"
+                    >
+                      Mark all as read
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                  {dietitianNotifications.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-slate-500">
+                      <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2 opacity-80" />
+                      <p className="font-semibold text-slate-700">All diet plans are on schedule!</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">Reminders appear 1 day before patient start dates.</p>
+                    </div>
+                  ) : (
+                    dietitianNotifications.map(notif => (
+                      <div
+                        key={notif.id}
+                        onClick={() => {
+                          markDietitianNotificationAsRead(notif.id);
+                          setIsNotifDropdownOpen(false);
+                          navigateTo('ai_meal_builder', { patientId: notif.patientId, planId: notif.planId });
+                        }}
+                        className={`p-3 hover:bg-teal-50/60 transition-colors cursor-pointer flex items-start gap-3 ${
+                          !notif.isRead ? 'bg-amber-50/40' : ''
+                        }`}
+                      >
+                        <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${
+                          notif.actionRequired ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          <Bell className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1 mb-0.5">
+                            <span className="text-xs font-bold text-slate-900 truncate">
+                              {notif.patientName}
+                            </span>
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 uppercase ${
+                              notif.actionRequired 
+                                ? 'bg-amber-100 text-amber-900 border border-amber-300' 
+                                : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                            }`}>
+                              {notif.actionRequired ? 'Action Required' : 'Plan Ready'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-700 leading-snug">
+                            {notif.message}
+                          </p>
+                          <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1.5">
+                            <span className="font-mono font-bold text-teal-700">
+                              Starts: {formatDate(notif.planStartDate)}
+                            </span>
+                            <span className="text-teal-600 font-semibold hover:underline">
+                              Open Plan ➔
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="px-3 pt-2.5 mt-1 border-t border-slate-100 text-center">
+                  <span className="text-[10px] text-slate-400">
+                    🔒 Dietitian workflow reminder • Invisible to patients
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Fast CTA Buttons */}
           <button

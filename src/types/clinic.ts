@@ -326,6 +326,10 @@ export interface ClinicalMealPlan {
   mode: MealPlanMode; // 'choice' or 'weekly'
   status: MealPlanStatus; // 'draft' until doctor publishes
   version: number;
+  startDate?: string; // YYYY-MM-DD (e.g. "2026-08-28")
+  durationDays?: number; // default 7
+  endDate?: string; // YYYY-MM-DD (e.g. "2026-09-03")
+  cycleNumber?: number; // e.g. 1, 2, 3
   targetCalories: number;
   targetMacros: {
     protein: number;
@@ -344,6 +348,26 @@ export interface ClinicalMealPlan {
   createdAt: string;
   publishedAt?: string;
   changeLog?: string[];
+}
+
+export interface DietitianNotification {
+  id: string;
+  type: 'diet_plan_starting_soon' | 'diet_plan_needs_renewal' | 'weight_checkin_due' | 'clinical_alert';
+  title: string;
+  message: string;
+  patientId: string;
+  patientName: string;
+  patientCode?: string;
+  planId?: string;
+  planStartDate: string; // YYYY-MM-DD
+  planEndDate?: string; // YYYY-MM-DD
+  durationDays: number;
+  planStatus: 'draft' | 'published' | 'not_created';
+  isRead: boolean;
+  createdAt: string; // ISO date
+  actionRequired: boolean;
+  actionUrl?: string;
+  cycleNumber?: number;
 }
 
 export interface ExerciseItem {

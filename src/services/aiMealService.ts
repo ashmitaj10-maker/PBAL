@@ -19,15 +19,29 @@ export interface GeneratePlanOptions {
   targetCalories?: number;
   dietPreference?: string;
   customPrompt?: string;
+  startDate?: string; // YYYY-MM-DD
+  durationDays?: number;
 }
 
 export async function generateClinicalMealPlan(options: GeneratePlanOptions): Promise<ClinicalMealPlan> {
   const { patientId, patientName, clinicId, assessment, mode } = options;
   const targetCalories = options.targetCalories || assessment.targetCalories || 1600;
   
+  // Default start date to tomorrow if not specified
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowIso = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+  const startDate = options.startDate || tomorrowIso;
+  const durationDays = options.durationDays || 7;
+  
+  // End date = startDate + (durationDays - 1) days
+  const endD = new Date(startDate);
+  endD.setDate(endD.getDate() + (durationDays - 1));
+  const endDate = `${endD.getFullYear()}-${String(endD.getMonth() + 1).padStart(2, '0')}-${String(endD.getDate()).padStart(2, '0')}`;
+  
   // Calculate recommended macros based on assessment
   const isKeto = assessment.foodPreference === 'Keto';
-  const isHighProtein = assessment.exerciseFrequency.includes('Active') || assessment.exerciseFrequency.includes('Athlete');
+  const isHighProtein = (assessment.exerciseFrequency || '').includes('Active') || (assessment.exerciseFrequency || '').includes('Athlete');
 
   let protein = assessment.targetProteinGrams || Math.round((targetCalories * (isHighProtein ? 0.30 : 0.22)) / 4);
   let fat = assessment.targetFatGrams || Math.round((targetCalories * (isKeto ? 0.65 : 0.28)) / 9);
@@ -97,6 +111,10 @@ export async function generateClinicalMealPlan(options: GeneratePlanOptions): Pr
     mode,
     status: 'draft', // Generated plans start as DRAFT until doctor publishes
     version: 1,
+    startDate,
+    durationDays,
+    endDate,
+    cycleNumber: 1,
     targetCalories,
     targetMacros: {
       protein,

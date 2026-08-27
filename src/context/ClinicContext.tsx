@@ -33,7 +33,8 @@ import {
   WeightUpdateDueItem,
   ExpiringPlanItem,
   PatientCodeInvite,
-  PatientSignUpInput
+  PatientSignUpInput,
+  DietitianNotification
 } from '../types/clinic';
 import { 
   INITIAL_CLINICS, 
@@ -65,7 +66,16 @@ import {
   MOCK_EXPIRING_PLANS
 } from '../data/mockEngagementData';
 import { calculateBmi } from '../utils/nutritionCalculators';
-import { formatDate, formatDateTime } from '../utils/dateUtils';
+import { 
+  formatDate, 
+  formatDateTime, 
+  getDaysDifference, 
+  addDays, 
+  calculatePlanEndDateIso, 
+  calculatePlanEndDateDisplay, 
+  isTomorrow, 
+  isToday 
+} from '../utils/dateUtils';
 
 export type ClinicScreen = 
   | 'login'
@@ -311,6 +321,14 @@ interface ClinicContextType {
   isPhotoModalOpen: boolean;
   setIsPhotoModalOpen: (open: boolean) => void;
 
+  // Phase 4: Dietitian Workflow Notifications & Start Date Reminders
+  dietitianNotifications: DietitianNotification[];
+  getDietitianNotifications: () => DietitianNotification[];
+  dismissDietitianNotification: (id: string) => void;
+  markDietitianNotificationAsRead: (id: string) => void;
+  markAllDietitianNotificationsAsRead: () => void;
+  getDietPlanReminderForPatient: (patientId: string) => DietitianNotification | null;
+
   // KPIs calculation helpers
   getDashboardKpis: () => {
     activePatients: number;
@@ -325,6 +343,8 @@ interface ClinicContextType {
     unreadChatCount: number;
     dueWeighInsCount: number;
     expiringPlansCount: number;
+    dietitianReminderCount: number;
+    upcomingDietPlanReminders: DietitianNotification[];
   };
 }
 
@@ -2062,6 +2082,190 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     return found || FOOD_SWAPS_CATALOG[0];
   };
 
+  // Phase 4: Dietitian Workflow Notifications & Start Date Reminders
+  const [dismissedNotifIds, setDismissedNotifIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('pbal_dismissed_dietitian_notifs');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [readNotifIds, setReadNotifIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('pbal_read_dietitian_notifs');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pbal_dismissed_dietitian_notifs', JSON.stringify(dismissedNotifIds));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [dismissedNotifIds]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pbal_read_dietitian_notifs', JSON.stringify(readNotifIds));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [readNotifIds]);
+
+  const getDietitianNotifications = (): DietitianNotification[] => {
+    const notifs: DietitianNotification[] = [];
+    const today = new Date();
+
+    allClinicalMealPlans.forEach(plan => {
+      if (!plan.startDate) return;
+      const pat = allPatients.find(p => p.id === plan.patientId);
+      if (!pat) return;
+
+      const diffDays = getDaysDifference(today, plan.startDate);
+      const duration = plan.durationDays || 7;
+      const formattedStartDate = formatDate(plan.startDate);
+      const notifId = `notif-plan-${plan.id}-${plan.startDate}`;
+
+      if (dismissedNotifIds.includes(notifId)) return;
+
+      // 1 Day before start date (diffDays === 1)
+      if (diffDays === 1) {
+        if (plan.status === 'published') {
+          notifs.push({
+            id: notifId,
+            type: 'diet_plan_starting_soon',
+            title: 'Diet Plan Starts Tomorrow (Ready)',
+            message: `${pat.name}'s ${duration}-day diet plan starts tomorrow (${formattedStartDate}). Plan is finalized & published.`,
+            patientId: pat.id,
+            patientName: pat.name,
+            patientCode: pat.patientCode,
+            planId: plan.id,
+            planStartDate: plan.startDate,
+            planEndDate: plan.endDate,
+            durationDays: duration,
+            planStatus: 'published',
+            isRead: readNotifIds.includes(notifId),
+            createdAt: plan.createdAt,
+            actionRequired: false,
+            cycleNumber: plan.cycleNumber || 1
+          });
+        } else {
+          notifs.push({
+            id: notifId,
+            type: 'diet_plan_starting_soon',
+            title: 'Diet Plan Reminder (Action Required)',
+            message: `${pat.name}'s diet plan starts tomorrow (${formattedStartDate}). Make sure their ${duration}-day plan is ready.`,
+            patientId: pat.id,
+            patientName: pat.name,
+            patientCode: pat.patientCode,
+            planId: plan.id,
+            planStartDate: plan.startDate,
+            planEndDate: plan.endDate,
+            durationDays: duration,
+            planStatus: 'draft',
+            isRead: readNotifIds.includes(notifId),
+            createdAt: plan.createdAt,
+            actionRequired: true,
+            cycleNumber: plan.cycleNumber || 1
+          });
+        }
+      } else if (diffDays === 0) {
+        notifs.push({
+          id: notifId,
+          type: 'diet_plan_starting_soon',
+          title: plan.status === 'published' ? 'Diet Plan Active Today' : 'Diet Plan Starts Today (Action Required)',
+          message: plan.status === 'published'
+            ? `${pat.name}'s ${duration}-day diet plan is active starting today (${formattedStartDate}).`
+            : `${pat.name}'s diet plan starts today (${formattedStartDate}). Finalization required.`,
+          patientId: pat.id,
+          patientName: pat.name,
+          patientCode: pat.patientCode,
+          planId: plan.id,
+          planStartDate: plan.startDate,
+          planEndDate: plan.endDate,
+          durationDays: duration,
+          planStatus: plan.status,
+          isRead: readNotifIds.includes(notifId),
+          createdAt: plan.createdAt,
+          actionRequired: plan.status !== 'published',
+          cycleNumber: plan.cycleNumber || 1
+        });
+      } else if (diffDays > 1 && diffDays <= 3) {
+        notifs.push({
+          id: notifId,
+          type: 'diet_plan_starting_soon',
+          title: plan.status === 'published' ? `Diet Plan Scheduled (Starts in ${diffDays} days)` : `Diet Plan Draft (Starts in ${diffDays} days)`,
+          message: `${pat.name}'s ${duration}-day diet plan starts on ${formattedStartDate} (${diffDays} days away).`,
+          patientId: pat.id,
+          patientName: pat.name,
+          patientCode: pat.patientCode,
+          planId: plan.id,
+          planStartDate: plan.startDate,
+          planEndDate: plan.endDate,
+          durationDays: duration,
+          planStatus: plan.status,
+          isRead: readNotifIds.includes(notifId),
+          createdAt: plan.createdAt,
+          actionRequired: plan.status !== 'published',
+          cycleNumber: plan.cycleNumber || 1
+        });
+      }
+
+      // Check recurring cycle end reminder (1 day before endDate)
+      if (plan.endDate) {
+        const endDiffDays = getDaysDifference(today, plan.endDate);
+        const recurringNotifId = `notif-recurring-${plan.id}-${plan.endDate}`;
+        if (!dismissedNotifIds.includes(recurringNotifId) && (endDiffDays === 1 || endDiffDays === 0)) {
+          const nextStartDate = addDays(plan.endDate, 1);
+          const formattedNextStart = formatDate(nextStartDate);
+          notifs.push({
+            id: recurringNotifId,
+            type: 'diet_plan_needs_renewal',
+            title: `Recurring Plan: Cycle ${(plan.cycleNumber || 1) + 1} Preparation Due`,
+            message: `${pat.name}'s current ${duration}-day cycle completes ${endDiffDays === 1 ? 'tomorrow' : 'today'}. Prepare Week ${(plan.cycleNumber || 1) + 1} plan starting ${formattedNextStart}.`,
+            patientId: pat.id,
+            patientName: pat.name,
+            patientCode: pat.patientCode,
+            planId: plan.id,
+            planStartDate: plan.startDate,
+            planEndDate: plan.endDate,
+            durationDays: duration,
+            planStatus: 'draft',
+            isRead: readNotifIds.includes(recurringNotifId),
+            createdAt: new Date().toISOString(),
+            actionRequired: true,
+            cycleNumber: (plan.cycleNumber || 1) + 1
+          });
+        }
+      }
+    });
+
+    return notifs;
+  };
+
+  const dismissDietitianNotification = (id: string) => {
+    setDismissedNotifIds(prev => [...prev, id]);
+  };
+
+  const markDietitianNotificationAsRead = (id: string) => {
+    setReadNotifIds(prev => prev.includes(id) ? prev : [...prev, id]);
+  };
+
+  const markAllDietitianNotificationsAsRead = () => {
+    const allIds = getDietitianNotifications().map(n => n.id);
+    setReadNotifIds(prev => Array.from(new Set([...prev, ...allIds])));
+  };
+
+  const getDietPlanReminderForPatient = (patientId: string): DietitianNotification | null => {
+    const notifs = getDietitianNotifications();
+    return notifs.find(n => n.patientId === patientId) || null;
+  };
+
   // KPIs Calculations
   const getDashboardKpis = () => {
     const active = patients.filter(p => p.status === 'active').length;
@@ -2096,6 +2300,8 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const unreadChatCount = allChatMessages.filter(m => m.sender === 'patient' && !m.isRead).length;
     const dueWeighInsCount = MOCK_WEIGHT_UPDATES_DUE.length;
     const expiringPlansCount = MOCK_EXPIRING_PLANS.length;
+    const dietitianNotifs = getDietitianNotifications();
+    const dietitianReminderCount = dietitianNotifs.filter(n => !n.isRead).length;
 
     return {
       activePatients: active,
@@ -2109,7 +2315,9 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       activeMealPlansCount,
       unreadChatCount,
       dueWeighInsCount,
-      expiringPlansCount
+      expiringPlansCount,
+      dietitianReminderCount,
+      upcomingDietPlanReminders: dietitianNotifs
     };
   };
 
@@ -2235,8 +2443,13 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         closePlanModal,
         isMeasurementModalOpen,
         setIsMeasurementModalOpen,
-        isPhotoModalOpen,
-        setIsPhotoModalOpen,
+        // Phase 4: Dietitian Workflow Notifications & Start Date Reminders
+        dietitianNotifications: getDietitianNotifications(),
+        getDietitianNotifications,
+        dismissDietitianNotification,
+        markDietitianNotificationAsRead,
+        markAllDietitianNotificationsAsRead,
+        getDietPlanReminderForPatient,
         getDashboardKpis
       }}
     >

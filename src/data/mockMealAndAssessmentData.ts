@@ -1131,6 +1131,10 @@ export const INITIAL_CLINICAL_MEAL_PLANS: ClinicalMealPlan[] = [
     mode: 'choice',
     status: 'published',
     version: 2,
+    startDate: '2026-08-28', // Starts tomorrow (Thursday)
+    durationDays: 7,
+    endDate: '2026-09-03', // Ends next Wednesday
+    cycleNumber: 1,
     targetCalories: 1550,
     targetMacros: {
       protein: 90,
@@ -1149,8 +1153,8 @@ export const INITIAL_CLINICAL_MEAL_PLANS: ClinicalMealPlan[] = [
     hydrationGuidelines: 'Drink 2.5 - 2.8 Liters of filtered water daily. Finish 80% of hydration before 7:00 PM.',
     clinicalRationale: 'Focuses on low glycemic load whole foods, high bioavailable leucine from paneer/yogurt, and soluble mucilage fiber to normalize HbA1c from 6.2% to <5.6% within 90 days.',
     createdBy: 'Dr. Ashmita Joshi, MD, RD',
-    createdAt: '2026-02-16T10:00:00Z',
-    publishedAt: '2026-02-18T14:30:00Z',
+    createdAt: '2026-08-26T10:00:00Z',
+    publishedAt: '2026-08-27T14:30:00Z',
     changeLog: [
       'v1 created as baseline draft.',
       'v2 adjusted evening snack to high-protein pea shake and added Ashwagandha nightcap.'
@@ -1164,8 +1168,12 @@ export const INITIAL_CLINICAL_MEAL_PLANS: ClinicalMealPlan[] = [
     assessmentId: 'asmt-102',
     title: 'Hepatic Recovery & Lean Muscle Hypertrophy Plan',
     mode: 'weekly',
-    status: 'published',
-    version: 1,
+    status: 'draft', // Action required for tomorrow!
+    version: 2,
+    startDate: '2026-08-28', // Starts tomorrow (Thursday)
+    durationDays: 7,
+    endDate: '2026-09-03',
+    cycleNumber: 2,
     targetCalories: 2100,
     targetMacros: {
       protein: 155,
@@ -1183,8 +1191,40 @@ export const INITIAL_CLINICAL_MEAL_PLANS: ClinicalMealPlan[] = [
     hydrationGuidelines: 'Target 3.2 - 3.5 Liters of water daily to support high protein clearance and creatine filtration.',
     clinicalRationale: 'High omega-3 and choline protocol designed to mobilize liver fat stores while fueling 4x/week resistance training.',
     createdBy: 'Dr. Ashmita Joshi, MD, RD',
-    createdAt: '2026-01-12T11:00:00Z',
-    publishedAt: '2026-01-12T17:00:00Z'
+    createdAt: '2026-08-26T11:00:00Z'
+  },
+  {
+    id: 'plan-cl-103',
+    patientId: 'pat-3', // Ananya Sen
+    patientName: 'Ananya Sen',
+    clinicId: 'clinic-1',
+    assessmentId: 'asmt-103',
+    title: 'Anti-Inflammatory PCOS & Hormonal Balance Protocol',
+    mode: 'choice',
+    status: 'draft',
+    version: 1,
+    startDate: '2026-08-30', // Starts in 3 days
+    durationDays: 7,
+    endDate: '2026-09-05',
+    cycleNumber: 1,
+    targetCalories: 1480,
+    targetMacros: {
+      protein: 85,
+      carbs: 130,
+      fat: 52,
+      fiber: 36
+    },
+    slots: createDefaultChoiceSlots(),
+    weeklyDays: createDefaultWeeklyDays(),
+    generalInstructions: [
+      'Daily spearmint tea in the afternoon to regulate androgen levels.',
+      'Strictly gluten-free and dairy-free whole food ingredients.',
+      'Incorporate seed cycling: 1 tbsp pumpkin and flaxseeds in follicular phase.'
+    ],
+    hydrationGuidelines: '2.5L filtered water with fresh cucumber and mint slices.',
+    clinicalRationale: 'Dairy-free, low-inflammatory protocol focusing on inositol, zinc and omega-3 to improve insulin sensitivity and regulate ovulation.',
+    createdBy: 'Dr. Ashmita Joshi, MD, RD',
+    createdAt: '2026-08-25T14:00:00Z'
   }
 ];
 

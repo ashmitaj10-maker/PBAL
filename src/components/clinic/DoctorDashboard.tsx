@@ -322,6 +322,93 @@ export const DoctorDashboard: React.FC = () => {
 
       </div>
 
+      {/* DIET PLAN START DATE REMINDERS & PREPARATION SCHEDULE */}
+      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center shadow-2xs">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-slate-900">Upcoming Diet Plans & Start Date Reminders</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-200">
+                  Dietitian Workflow
+                </span>
+                {kpis.dietitianReminderCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse flex items-center gap-1">
+                    <Bell className="w-3 h-3 text-amber-700" />
+                    {kpis.dietitianReminderCount} Action Due
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Automatic 1-day advance reminder before each patient's diet plan begins. Keep upcoming 7-day cycles ready.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigateTo('ai_meal_builder')}
+              className="px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>AI Meal Builder</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Reminders Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {(kpis.upcomingDietPlanReminders || []).map((item) => (
+            <div
+              key={item.id}
+              onClick={() => navigateTo('ai_meal_builder', { patientId: item.patientId, planId: item.planId })}
+              className={`p-4 rounded-2xl border transition-all cursor-pointer hover:shadow-md flex flex-col justify-between gap-3 ${
+                item.actionRequired
+                  ? 'bg-amber-50/50 border-amber-200 hover:border-amber-300 ring-1 ring-amber-200/50'
+                  : 'bg-slate-50/60 border-slate-200 hover:border-teal-300'
+              }`}
+            >
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2 truncate">
+                    <div className="w-7 h-7 rounded-full bg-teal-700 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                      {(item.patientName || 'PT').slice(0, 2).toUpperCase()}
+                    </div>
+                    <span className="font-bold text-xs text-slate-900 truncate">
+                      {item.patientName}
+                    </span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase shrink-0 ${
+                    item.actionRequired
+                      ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                      : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                  }`}>
+                    {item.actionRequired ? '⚠️ Action Required' : '✓ Plan Ready'}
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-700 leading-snug">
+                  {item.message}
+                </p>
+              </div>
+
+              <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Start: <strong className="font-mono text-teal-800">{formatDate(item.planStartDate)}</strong></span>
+                </div>
+                <span className="text-teal-700 font-bold text-xs hover:underline flex items-center gap-0.5">
+                  Open Plan <ArrowRight className="w-3 h-3" />
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* PHASE 3 ENHANCEMENT ROW: TODAY'S CHATS + WEIGHT UPDATES DUE + GOAL DISTRIBUTION */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
