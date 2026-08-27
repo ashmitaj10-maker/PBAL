@@ -661,60 +661,49 @@ User Preferences/Restrictions: ${preferences || 'Keep high protein and low glyce
 app.post("/api/ai/smart-food-swap", async (req, res) => {
   try {
     const { craving, patientName, patientGoal, patientFoodPreference } = req.body;
-    const cravingText = (craving || "Pizza").trim();
+    const cravingText = (craving || "").trim();
+
+    if (!cravingText) {
+      return res.json({
+        success: false,
+        isUnderstood: false,
+        message: "Please enter a food or craving to search for healthier swaps."
+      });
+    }
+
     const ai = getGenAI();
 
     if (!ai) {
       const fallbackResult = generateHeuristicFoodSwapsForAllPreferences(cravingText, patientFoodPreference);
-      return res.json({ success: true, ...fallbackResult, isAiGenerated: false });
+      return res.json({ success: fallbackResult.isUnderstood, ...fallbackResult, isAiGenerated: false });
     }
 
     const systemInstruction = `You are the Lead Clinical Dietitian and Biochemical Nutrition Scientist at 'Perfect Body & Life Clinic'.
-When a patient experiences an intense craving (such as fast food, heavy sweets, deep-fried snacks, or high-glycemic carbohydrates), you provide evidence-based, medically superior swaps across ALL food preferences.
+When a patient inputs a craving in natural language (e.g., "I want something sweet", "I'm craving pizza", "I want something crunchy", "I want chocolate", "I want something spicy", "late night noodles"), you must:
+1. Accurately identify the underlying craving/food category.
+2. If the user input is complete gibberish or not a food/craving, set "isUnderstood": false.
+3. For every identified craving, generate AT LEAST 2 DIFFERENT high-quality food-swap options for each of the following dietary preferences:
+   - "Vegetarian": at least 2 options (Option 1 & Option 2)
+   - "Non-Vegetarian": at least 2 options (Option 1 & Option 2)
+   - "Vegan": at least 2 options (Option 1 & Option 2)
+   - "Jain": at least 2 options (Option 1 & Option 2 - strictly NO onion, NO garlic, NO potato/root vegetables)
+   - "Eggetarian": at least 2 options (Option 1 & Option 2)
+   - "Keto": at least 2 options (Option 1 & Option 2 - <8g net carbs, healthy fats)
+   - "Gluten-Free": at least 2 options (Option 1 & Option 2 - 100% celiac safe)
 
-You MUST generate tailored healthier swaps for ALL of these 7 food preferences:
-1. "Vegetarian": High in bioavailable vegetarian protein (paneer, hung curd, lentils, sprouts).
-2. "Jain": Strictly NO root vegetables (NO onion, NO garlic, NO potato, NO carrot, NO radish). Uses green plantain / raw banana, paneer, bottle gourd, moong, sunflower seeds.
-3. "Vegan": 100% plant-based, strictly dairy-free, egg-free, ghee-free. Uses organic tofu, tempeh, edamame, cashew cream, nutritional yeast, almond milk.
-4. "Eggetarian": Uses organic eggs / egg whites, high protein, low glycemic load.
-5. "Non-Vegetarian": Uses lean poultry breast, grilled fish tikka, prawns, turkey.
-6. "Keto": Very low carb (<10g net carbs), healthy fats (avocado, nuts, olive oil), moderate protein.
-7. "Gluten-Free": 100% gluten-free & celiac safe (millet, quinoa, almond flour, buckwheat).
+4. CRITICAL: EVERY SINGLE FOOD SWAP MUST INCLUDE A FULL, STEP-BY-STEP RECIPE with:
+   - Recipe name
+   - Exact ingredients with quantities (e.g., "60g Spelt flour", "50g low-fat paneer")
+   - Step-by-step preparation and cooking instructions (4-6 clear steps)
+   - Approximate prep time and cook time in minutes
+   - Serving size description (e.g. "1 personal pizza (approx. 240g)", "1 bowl")
+   - Optional substitutions
+   - Chef's culinary tip & Medical clinical rationale.`;
 
-Each swap must dramatically reduce calories (saving 200-500 kcal), increase bioavailable protein (+10-25g), lower glycemic index to Low, and include practical culinary prep tips and a medical clinical rationale (e.g. insulin stabilization, gut barrier protection, visceral fat loss).`;
+    const prompt = `Analyze this food craving query: "${cravingText}".
+Patient Demographics: Name: ${patientName || "Patient"}, Clinical Goal: ${patientGoal || "Metabolic Health & Fat Loss"}, Preference: ${patientFoodPreference || "Vegetarian"}.
 
-    const prompt = `Analyze this food craving: "${cravingText}".
-Patient Context: Name: ${patientName || "Patient"}, Goal: ${patientGoal || "Fat Loss & Metabolic Health"}, Preferred Diet: ${patientFoodPreference || "Vegetarian"}.
-
-Return a JSON object containing:
-1. "craving": string (analyzed dish name)
-2. "category": string (e.g. "Fast Food & Cravings", "Desserts & Sweets", "Rice & Heavy Mains", "Tea Time Snacks", "Beverages", "Street Food")
-3. "originalDish": {
-     "name": string,
-     "calories": number,
-     "protein": number,
-     "carbs": number,
-     "fat": number,
-     "fiber": number,
-     "glycemicIndex": "High" | "Medium" | "Low",
-     "drawbacks": string
-   }
-4. "swaps": Array of 7 swap objects (one for each of "Vegetarian", "Jain", "Vegan", "Eggetarian", "Non-Vegetarian", "Keto", "Gluten-Free"):
-   Each swap object must have:
-   - "foodPreference": string (one of "Vegetarian", "Jain", "Vegan", "Eggetarian", "Non-Vegetarian", "Keto", "Gluten-Free")
-   - "swapOptionName": string (appetizing, descriptive name)
-   - "calories": number
-   - "protein": number
-   - "carbs": number
-   - "fat": number
-   - "fiber": number
-   - "glycemicIndex": "Low" | "Medium"
-   - "calorieSaving": number (originalDish.calories - this swap calories)
-   - "proteinGain": number (this swap protein - originalDish.protein)
-   - "preparationTip": string (precise 2-3 step preparation guidance)
-   - "clinicalReason": string (medical impact on insulin, GLP-1, visceral adiposity, gut microbiome)
-   - "dietaryTags": array of strings (e.g. ["Low GI", "High Protein", "Jain Safe", "Keto Friendly"])
-   - "keyIngredients": array of strings`;
+Generate structured response containing the identified craving, original dish macros, and AT LEAST 2 complete recipe swaps for each dietary preference category (Vegetarian, Non-Vegetarian, Vegan, Jain, Eggetarian, Keto, Gluten-Free).`;
 
     const response = await generateContentWithResilience(ai, {
       primaryModel: "gemini-3.7-flash",
@@ -725,6 +714,7 @@ Return a JSON object containing:
         responseSchema: {
           type: Type.OBJECT,
           properties: {
+            isUnderstood: { type: Type.BOOLEAN },
             craving: { type: Type.STRING },
             category: { type: Type.STRING },
             originalDish: {
@@ -747,6 +737,7 @@ Return a JSON object containing:
                 type: Type.OBJECT,
                 properties: {
                   foodPreference: { type: Type.STRING },
+                  optionNumber: { type: Type.NUMBER },
                   swapOptionName: { type: Type.STRING },
                   calories: { type: Type.NUMBER },
                   protein: { type: Type.NUMBER },
@@ -755,24 +746,58 @@ Return a JSON object containing:
                   fiber: { type: Type.NUMBER },
                   glycemicIndex: { type: Type.STRING },
                   calorieSaving: { type: Type.NUMBER },
-                  proteinGain: { type: Type.NUMBER },
                   preparationTip: { type: Type.STRING },
                   clinicalReason: { type: Type.STRING },
                   dietaryTags: { type: Type.ARRAY, items: { type: Type.STRING } },
                   keyIngredients: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  recipe: {
+                    type: Type.OBJECT,
+                    properties: {
+                      recipeName: { type: Type.STRING },
+                      servings: { type: Type.STRING },
+                      prepTimeMinutes: { type: Type.NUMBER },
+                      cookTimeMinutes: { type: Type.NUMBER },
+                      ingredients: {
+                        type: Type.ARRAY,
+                        items: {
+                          type: Type.OBJECT,
+                          properties: {
+                            item: { type: Type.STRING },
+                            amount: { type: Type.STRING },
+                            notes: { type: Type.STRING },
+                          },
+                          required: ["item", "amount"],
+                        },
+                      },
+                      steps: { type: Type.ARRAY, items: { type: Type.STRING } },
+                      optionalSubstitutions: { type: Type.ARRAY, items: { type: Type.STRING } },
+                      chefTip: { type: Type.STRING },
+                      clinicalBenefit: { type: Type.STRING },
+                    },
+                    required: ["recipeName", "servings", "prepTimeMinutes", "cookTimeMinutes", "ingredients", "steps"],
+                  },
                 },
-                required: ["foodPreference", "swapOptionName", "calories", "protein", "carbs", "fat", "fiber", "glycemicIndex", "calorieSaving", "preparationTip", "clinicalReason"],
+                required: ["foodPreference", "swapOptionName", "calories", "protein", "carbs", "fat", "fiber", "glycemicIndex", "preparationTip", "clinicalReason", "recipe"],
               },
             },
           },
-          required: ["craving", "category", "originalDish", "swaps"],
+          required: ["isUnderstood", "craving", "category", "originalDish", "swaps"],
         },
       },
     });
 
     const parsed = JSON.parse(response.text || "{}");
-    // Enrich swaps with unique IDs and normalized structure
-    const orig = parsed.originalDish || { calories: 650, protein: 8, glycemicIndex: "High" };
+
+    if (parsed.isUnderstood === false) {
+      return res.json({
+        success: false,
+        isUnderstood: false,
+        craving: cravingText,
+        message: "I couldn't quite understand that craving. Try describing the food you're craving or the type of food you want."
+      });
+    }
+
+    const orig = parsed.originalDish || { calories: 650, protein: 8, carbs: 70, fat: 28, fiber: 2, glycemicIndex: "High" };
     const enrichedSwaps = (parsed.swaps || []).map((s: any, idx: number) => ({
       id: `ai-swap-${Date.now()}-${idx}`,
       cravingOrDish: orig.name || cravingText,
@@ -789,12 +814,15 @@ Return a JSON object containing:
       swapFiberGrams: s.fiber || 6,
       swapCarbsGrams: s.carbs,
       swapFatGrams: s.fat,
+      prepTimeMinutes: s.recipe?.prepTimeMinutes || 10,
+      cookTimeMinutes: s.recipe?.cookTimeMinutes || 10,
+      servings: s.recipe?.servings || "1 serving",
       originalMacros: {
         calories: orig.calories,
         protein: orig.protein,
         carbs: orig.carbs,
         fat: orig.fat,
-        fiber: orig.fiber,
+        fiber: orig.fiber || 2,
         glycemicIndex: orig.glycemicIndex || "High"
       },
       swapMacros: {
@@ -806,16 +834,18 @@ Return a JSON object containing:
         glycemicIndex: s.glycemicIndex || "Low"
       },
       preparationTip: s.preparationTip,
-      instructions: s.preparationTip,
+      instructions: s.recipe?.steps ? s.recipe.steps.join(" ") : s.preparationTip,
       clinicalReason: s.clinicalReason,
       clinicalRationale: s.clinicalReason,
       dietaryTags: s.dietaryTags || [s.foodPreference, "Low GI", "High Fiber"],
-      keyIngredients: s.keyIngredients || [],
+      keyIngredients: s.keyIngredients || (s.recipe?.ingredients ? s.recipe.ingredients.map((i: any) => `${i.amount} ${i.item}`) : []),
+      recipe: s.recipe,
       isAiGenerated: true
     }));
 
     return res.json({
       success: true,
+      isUnderstood: true,
       craving: parsed.craving || cravingText,
       category: parsed.category || "Smart Food Swaps",
       originalDish: parsed.originalDish,
@@ -823,9 +853,9 @@ Return a JSON object containing:
       isAiGenerated: true
     });
   } catch (error: any) {
-    console.warn("AI smart-food-swap failed or timed out, returning rich heuristic multi-preference swaps:", error.message);
+    console.warn("AI smart-food-swap fallback triggered:", error.message);
     const fallbackResult = generateHeuristicFoodSwapsForAllPreferences(req.body.craving || "Pizza", req.body.patientFoodPreference);
-    return res.json({ success: true, ...fallbackResult, isAiGenerated: false });
+    return res.json({ success: fallbackResult.isUnderstood, ...fallbackResult, isAiGenerated: false });
   }
 });
 

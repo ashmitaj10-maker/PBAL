@@ -515,6 +515,18 @@ export interface ChatConversationSummary {
   isOnline?: boolean;
 }
 
+export interface SwapRecipe {
+  recipeName: string;
+  servings: string; // e.g. "1 serving (approx 250g)"
+  prepTimeMinutes: number;
+  cookTimeMinutes: number;
+  ingredients: { item: string; amount: string; notes?: string }[];
+  steps: string[];
+  optionalSubstitutions?: string[];
+  chefTip?: string;
+  clinicalBenefit?: string;
+}
+
 export interface FoodSwapSuggestion {
   id: string;
   cravingOrDish: string;
@@ -532,6 +544,9 @@ export interface FoodSwapSuggestion {
   swapFiberGrams: number;
   swapCarbsGrams?: number;
   swapFatGrams?: number;
+  prepTimeMinutes?: number;
+  cookTimeMinutes?: number;
+  servings?: string;
   originalMacros?: {
     calories?: number;
     protein?: number;
@@ -553,6 +568,7 @@ export interface FoodSwapSuggestion {
   clinicalReason: string;
   clinicalRationale?: string;
   keyIngredients?: string[];
+  recipe?: SwapRecipe;
   isAiGenerated?: boolean;
 }
 

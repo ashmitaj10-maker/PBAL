@@ -9,21 +9,21 @@ import {
   Check, 
   AlertTriangle, 
   Flame, 
-  User, 
   CheckCircle2, 
   ChefHat, 
   FileText, 
   Zap,
-  TrendingDown,
   RefreshCw,
-  Info,
   X,
-  PlusCircle,
   Filter,
-  ShieldCheck,
-  Award
+  Award,
+  Clock,
+  Utensils,
+  BookOpen,
+  ArrowRight,
+  HelpCircle
 } from 'lucide-react';
-import { FoodSwapSuggestion } from '../../types/clinic';
+import { FoodSwapSuggestion, SwapRecipe } from '../../types/clinic';
 import { 
   generateHeuristicFoodSwapsForAllPreferences,
   CRAVING_KNOWLEDGE_BASE
@@ -37,34 +37,29 @@ type FoodPrefFilter = 'All' | 'Vegetarian' | 'Jain' | 'Vegan' | 'Eggetarian' | '
 const PREFERENCE_OPTIONS: { id: FoodPrefFilter; label: string; icon: string; badgeColor: string; description: string }[] = [
   { id: 'All', label: 'All Preferences', icon: '🌐', badgeColor: 'bg-slate-100 text-slate-800 border-slate-200', description: 'Showing all clinical variations' },
   { id: 'Vegetarian', label: 'Vegetarian', icon: '🥗', badgeColor: 'bg-emerald-50 text-emerald-800 border-emerald-200', description: 'Paneer, lentils, curd & sprouts' },
-  { id: 'Jain', label: 'Jain', icon: '🕉️', badgeColor: 'bg-amber-50 text-amber-900 border-amber-200', description: 'No root veggies / onion / garlic / potato' },
-  { id: 'Vegan', label: 'Vegan', icon: '🌱', badgeColor: 'bg-teal-50 text-teal-800 border-teal-200', description: '100% plant-based & dairy-free' },
-  { id: 'Eggetarian', label: 'Eggetarian', icon: '🥚', badgeColor: 'bg-yellow-50 text-yellow-900 border-yellow-200', description: 'Lean egg whites & high protein' },
   { id: 'Non-Vegetarian', label: 'Non-Vegetarian', icon: '🍗', badgeColor: 'bg-rose-50 text-rose-800 border-rose-200', description: 'Lean chicken breast & wild fish' },
+  { id: 'Vegan', label: 'Vegan', icon: '🌱', badgeColor: 'bg-teal-50 text-teal-800 border-teal-200', description: '100% plant-based & dairy-free' },
+  { id: 'Jain', label: 'Jain', icon: '🕉️', badgeColor: 'bg-amber-50 text-amber-900 border-amber-200', description: 'No root veggies / onion / garlic / potato' },
+  { id: 'Eggetarian', label: 'Eggetarian', icon: '🥚', badgeColor: 'bg-yellow-50 text-yellow-900 border-yellow-200', description: 'Lean egg whites & high protein' },
   { id: 'Keto', label: 'Keto / Low-Carb', icon: '🥑', badgeColor: 'bg-purple-50 text-purple-800 border-purple-200', description: '<10g net carbs & healthy fats' },
   { id: 'Gluten-Free', label: 'Gluten-Free', icon: '🌾', badgeColor: 'bg-sky-50 text-sky-800 border-sky-200', description: 'Millets, quinoa & celiac safe' },
 ];
 
 const POPULAR_CRAVINGS = [
-  { label: '🍕 Pizza', query: 'Pizza' },
-  { label: '🍛 Biryani', query: 'Dum Biryani' },
-  { label: '🥟 Samosa', query: 'Samosa' },
-  { label: '🍧 Ice Cream', query: 'Ice Cream Sundae' },
-  { label: '🍯 Gulab Jamun', query: 'Gulab Jamun' },
-  { label: '🍝 Creamy Pasta', query: 'White Sauce Pasta' },
-  { label: '🍔 Burger', query: 'Cheeseburger' },
-  { label: '🍟 French Fries', query: 'French Fries' },
-  { label: '🥟 Momos', query: 'Steamed Momos' },
-  { label: '🍫 Brownie', query: 'Chocolate Brownie' },
-  { label: '🍲 Pav Bhaji', query: 'Pav Bhaji' },
-  { label: '🍜 Maggi Noodles', query: 'Maggi' },
+  { label: '🍕 Pizza', query: "I'm craving pizza" },
+  { label: '🍫 Chocolate', query: 'I want chocolate' },
+  { label: '🍟 Crunchy Snacks', query: 'I want something crunchy' },
+  { label: '🍰 Sweets / Dessert', query: 'I want something sweet' },
+  { label: '🌶️ Spicy Chaat', query: 'I want something spicy' },
+  { label: '🍧 Ice Cream', query: 'Craving cold ice cream' },
+  { label: '🍜 Noodles / Maggi', query: 'I want noodles' },
+  { label: '🍛 Dum Biryani', query: 'Craving rich biryani' },
 ];
 
 export const AiCopilotView: React.FC = () => {
   const { 
     selectedPatient, 
     patients, 
-    setSelectedPatientId, 
     foodSwapsCatalog, 
     nutrientGapsTemplates, 
     sendChatMessage, 
@@ -77,15 +72,22 @@ export const AiCopilotView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<CopilotTab>('food_swaps');
   
   // Smart Food Swap States
-  const [cravingQuery, setCravingQuery] = useState('Pizza');
+  const [cravingQuery, setCravingQuery] = useState("I'm craving pizza");
   const [selectedPreference, setSelectedPreference] = useState<FoodPrefFilter>('All');
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [aiGeneratedPayload, setAiGeneratedPayload] = useState<{
     craving: string;
     category: string;
     originalDish: any;
     swaps: FoodSwapSuggestion[];
+    isUnderstood?: boolean;
+    message?: string;
   } | null>(null);
+
+  // Recipe Modal State
+  const [activeRecipeSwap, setActiveRecipeSwap] = useState<FoodSwapSuggestion | null>(null);
+  const [checkedIngredients, setCheckedIngredients] = useState<Record<string, boolean>>({});
 
   // Motivation & SOAP states
   const [motivationTone, setMotivationTone] = useState<'celebratory' | 'empathetic' | 'strict_discipline'>('celebratory');
@@ -99,19 +101,29 @@ export const AiCopilotView: React.FC = () => {
 
   const currentPatient = selectedPatient || patients[0];
 
-  // Helper to fetch multi-preference swaps from AI or instant fallback
+  // Helper to fetch multi-preference swaps from AI or instant heuristic fallback
   const fetchSmartFoodSwaps = async (query: string) => {
-    const clean = query.trim();
+    const clean = (query || '').trim();
     if (!clean) {
       setAiGeneratedPayload(null);
+      setErrorMessage(null);
       return;
     }
 
-    // 1. Instantly populate with rich heuristic swaps from local knowledge engine
+    setErrorMessage(null);
+
+    // 1. Instantly populate with heuristic knowledge base
     const instantHeuristic = generateHeuristicFoodSwapsForAllPreferences(
       clean,
       currentPatient?.foodPreference
     );
+
+    if (!instantHeuristic.isUnderstood) {
+      setErrorMessage(instantHeuristic.message || "I couldn't quite understand that craving. Try describing the food you're craving or the type of food you want.");
+      setAiGeneratedPayload(instantHeuristic);
+      return;
+    }
+
     setAiGeneratedPayload(instantHeuristic);
 
     // 2. Concurrently query Gemini AI backend endpoint for deeper contextual synthesis
@@ -127,18 +139,22 @@ export const AiCopilotView: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          cravingQuery: clean,
-          foodPreference: selectedPreference === 'All' ? currentPatient?.foodPreference || 'Vegetarian' : selectedPreference,
-          patientGoals: currentPatient?.primaryGoals,
-          patientMedical: currentPatient?.medicalConditions
+          craving: clean,
+          patientName: currentPatient?.name || 'Patient',
+          patientGoal: currentPatient?.primaryGoals?.[0] || 'Metabolic Health',
+          patientFoodPreference: selectedPreference === 'All' ? currentPatient?.foodPreference || 'Vegetarian' : selectedPreference
         }),
         signal: abortControllerRef.current.signal
       });
 
       if (response.ok) {
         const data = await response.json();
-        if (data.swaps && data.swaps.length > 0) {
+        if (data.isUnderstood === false) {
+          setErrorMessage(data.message || "I couldn't quite understand that craving. Try describing the food you're craving or the type of food you want.");
           setAiGeneratedPayload(data);
+        } else if (data.swaps && data.swaps.length > 0) {
+          setAiGeneratedPayload(data);
+          setErrorMessage(null);
         }
       }
     } catch (err: any) {
@@ -154,35 +170,10 @@ export const AiCopilotView: React.FC = () => {
     fetchSmartFoodSwaps(cravingQuery);
   }, []);
 
-  const handleSearchChange = (val: string) => {
-    setCravingQuery(val);
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    debounceTimerRef.current = setTimeout(() => {
-      fetchSmartFoodSwaps(val);
-    }, 280);
-  };
-
-  const handleSelectQuickCraving = (q: string) => {
-    setCravingQuery(q);
-    fetchSmartFoodSwaps(q);
-  };
-
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
-  };
-
-  const handleSendSwapToPatientChat = (swap: FoodSwapSuggestion) => {
-    if (!currentPatient) return;
-    const msg = `Craving alternative for *${swap.cravingOrDish}*: Check out *${swap.swapOptionName || swap.clinicalSwap}*! It has ${swap.swapCalories} kcal (saves ${swap.calorieSaving} kcal) with ${swap.swapProteinGrams}g protein. ${swap.clinicalReason || swap.preparationTip}`;
-    sendChatMessage({
-      patientId: currentPatient.id,
-      content: msg,
-      sender: isPatientSession ? 'patient' : 'doctor'
-    });
-    setSentToChatKey(swap.id);
-    setTimeout(() => setSentToChatKey(null), 2500);
   };
 
   const handleSendToChat = (text: string, key: string) => {
@@ -239,12 +230,12 @@ export const AiCopilotView: React.FC = () => {
             {isPatientSession ? 'Doctor AI Copilot • Craving & Healthy Swap Assistant' : 'Clinical AI Assistant • Doctor Copilot'}
           </div>
           <h1 className="text-2xl font-black text-slate-900">
-            {isPatientSession ? 'Search Cravings & Discover Healthy Swaps' : 'Doctor AI Copilot & Nutrition Intelligence'}
+            {isPatientSession ? 'Craving Search & Smart Food Swaps' : 'Doctor AI Copilot & Nutrition Intelligence'}
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
             {isPatientSession 
-              ? 'Search any food craving to find delicious, dietitian-approved healthy alternatives aligned with your health plan.'
-              : 'Real-time multi-preference craving replacements, biochemical nutrient gap diagnostics, compliance messaging & SOAP digests.'
+              ? 'Describe any craving to get instant, delicious dietitian-approved healthy food swaps with complete step-by-step recipes.'
+              : 'Real-time multi-preference craving replacements, complete recipes with cooking instructions, biochemical nutrient gap diagnostics & SOAP digests.'
             }
           </p>
         </div>
@@ -321,12 +312,12 @@ export const AiCopilotView: React.FC = () => {
             
             <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
               
-              {/* Live Input */}
+              {/* Natural Language Search Input */}
               <div className="relative flex-1">
                 <Search className="w-5 h-5 text-slate-400 absolute left-3.5 top-3" />
                 <input
                   type="text"
-                  placeholder="Type any craving (e.g., Pizza, Biryani, Samosa, Ice Cream, Momos, Pasta, French Fries, Maggi)..."
+                  placeholder='Describe your craving in natural language (e.g. "I want something sweet", "I am craving pizza", "I want something crunchy", "I want chocolate")...'
                   value={cravingQuery}
                   onChange={(e) => setCravingQuery(e.target.value)}
                   onKeyDown={(e) => {
@@ -352,17 +343,17 @@ export const AiCopilotView: React.FC = () => {
               <button
                 onClick={() => fetchSmartFoodSwaps(cravingQuery)}
                 disabled={isAiLoading || !cravingQuery.trim()}
-                className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm whitespace-nowrap"
+                className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm whitespace-nowrap cursor-pointer"
               >
                 {isAiLoading ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin text-teal-200" />
-                    Synthesizing Swaps...
+                    Analyzing Craving...
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4 text-teal-200" />
-                    Generate AI Swaps
+                    Search & Find Swaps
                   </>
                 )}
               </button>
@@ -371,7 +362,7 @@ export const AiCopilotView: React.FC = () => {
             {/* Quick-Click Craving Chips */}
             <div className="flex items-center gap-2 flex-wrap pt-1">
               <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
-                <Flame className="w-3.5 h-3.5 text-amber-500" /> Quick Cravings:
+                <Flame className="w-3.5 h-3.5 text-amber-500" /> Popular Cravings:
               </span>
               {(POPULAR_CRAVINGS || []).map((item, idx) => (
                 <button
@@ -380,7 +371,7 @@ export const AiCopilotView: React.FC = () => {
                     setCravingQuery(item.query);
                     fetchSmartFoodSwaps(item.query);
                   }}
-                  className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition-all ${
+                  className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition-all cursor-pointer ${
                     cravingQuery.toLowerCase().includes(item.query.toLowerCase())
                       ? 'bg-teal-50 text-teal-900 border-teal-400 font-bold shadow-xs'
                       : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -391,18 +382,18 @@ export const AiCopilotView: React.FC = () => {
               ))}
             </div>
 
-            {/* AI Status / Patient Dietary Context Bar */}
+            {/* AI Status & Patient Dietary Context Bar */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs">
               <div className="flex items-center gap-2 text-slate-600">
                 {isAiLoading ? (
                   <span className="flex items-center gap-1.5 text-teal-700 font-semibold animate-pulse">
                     <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-                    AI Nutrition Engine analyzing biochemical pathways & generating multi-preference swaps...
+                    AI Engine identifying craving and generating at least 2 distinct recipes per dietary preference...
                   </span>
                 ) : (
                   <span className="flex items-center gap-1.5 text-slate-500">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    Clinical swaps calibrated for all 7 dietary preferences with glycemic load & macro analysis.
+                    At least 2 complete recipe swaps generated per applicable preference with cooking times and full ingredients.
                   </span>
                 )}
               </div>
@@ -410,59 +401,105 @@ export const AiCopilotView: React.FC = () => {
               {currentPatient && (
                 <div className="flex items-center gap-1.5 text-teal-900 bg-teal-50/80 px-2.5 py-1 rounded-lg border border-teal-200">
                   <Award className="w-3.5 h-3.5 text-teal-600" />
-                  <span>Patient Profile Diet: <strong>{currentPatient.foodPreference}</strong></span>
+                  <span>Dietary Preference: <strong>{currentPatient.foodPreference}</strong></span>
                 </div>
               )}
             </div>
 
           </div>
 
-          {/* Food Preference Filter Tabs */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
-                <Filter className="w-3.5 h-3.5 text-teal-600" />
-                Filter by Food Preference
+          {/* Error / Unrecognized Craving Message */}
+          {errorMessage && (
+            <div className="bg-amber-50 border-2 border-amber-300 text-amber-900 p-5 rounded-2xl shadow-sm space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-amber-200 text-amber-900 rounded-xl mt-0.5">
+                  <HelpCircle className="w-5 h-5" />
+                </div>
+                <div className="space-y-1 flex-1">
+                  <h4 className="text-sm font-bold text-amber-950">Craving Not Recognized</h4>
+                  <p className="text-xs leading-relaxed text-amber-900">
+                    {errorMessage}
+                  </p>
+                </div>
               </div>
-              <span className="text-xs text-slate-500">
-                Showing {displayedSwaps.length} alternative{displayedSwaps.length === 1 ? '' : 's'}
-              </span>
-            </div>
 
-            <div className="flex items-center gap-2 overflow-x-auto pb-1.5 no-scrollbar">
-              {(PREFERENCE_OPTIONS || []).map((pref) => {
-                const isSelected = selectedPreference === pref.id;
-                const isPatientMatch = currentPatientPref.toLowerCase().includes(pref.id.toLowerCase());
-
-                return (
+              <div className="pt-2 border-t border-amber-200/60 flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-xs font-semibold text-amber-800">
+                  Try one of these examples:
+                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {['"I want something sweet"', '"I\'m craving pizza"', '"I want something crunchy"', '"I want chocolate"'].map((eg, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        const cleanEg = eg.replace(/"/g, '');
+                        setCravingQuery(cleanEg);
+                        fetchSmartFoodSwaps(cleanEg);
+                      }}
+                      className="text-xs bg-white text-amber-900 border border-amber-300 px-2.5 py-1 rounded-lg font-bold hover:bg-amber-100 transition-colors cursor-pointer"
+                    >
+                      {eg}
+                    </button>
+                  ))}
                   <button
-                    key={pref.id}
-                    onClick={() => setSelectedPreference(pref.id)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 whitespace-nowrap shadow-xs ${
-                      isSelected
-                        ? 'bg-teal-600 text-white border-teal-700 shadow-md ring-2 ring-teal-300/50'
-                        : isPatientMatch && pref.id !== 'All'
-                        ? 'bg-emerald-50 text-emerald-950 border-emerald-300 hover:bg-emerald-100'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
-                    }`}
+                    onClick={() => fetchSmartFoodSwaps(cravingQuery)}
+                    className="text-xs bg-amber-600 text-white px-3 py-1 rounded-lg font-bold hover:bg-amber-700 transition-colors ml-auto cursor-pointer"
                   >
-                    <span>{pref.icon}</span>
-                    <span>{pref.label}</span>
-                    {isPatientMatch && pref.id !== 'All' && (
-                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
-                        isSelected ? 'bg-white/20 text-white' : 'bg-emerald-200 text-emerald-900'
-                      }`}>
-                        Patient Match
-                      </span>
-                    )}
+                    Retry Search
                   </button>
-                );
-              })}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Food Preference Filter Tabs */}
+          {!errorMessage && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  <Filter className="w-3.5 h-3.5 text-teal-600" />
+                  Filter by Food Preference
+                </div>
+                <span className="text-xs text-slate-500 font-medium">
+                  Showing {displayedSwaps.length} alternative{displayedSwaps.length === 1 ? '' : 's'} (≥2 per preference)
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 overflow-x-auto pb-1.5 no-scrollbar">
+                {(PREFERENCE_OPTIONS || []).map((pref) => {
+                  const isSelected = selectedPreference === pref.id;
+                  const isPatientMatch = currentPatientPref.toLowerCase().includes(pref.id.toLowerCase());
+
+                  return (
+                    <button
+                      key={pref.id}
+                      onClick={() => setSelectedPreference(pref.id)}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 whitespace-nowrap shadow-xs cursor-pointer ${
+                        isSelected
+                          ? 'bg-teal-600 text-white border-teal-700 shadow-md ring-2 ring-teal-300/50'
+                          : isPatientMatch && pref.id !== 'All'
+                          ? 'bg-emerald-50 text-emerald-950 border-emerald-300 hover:bg-emerald-100'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                      }`}
+                    >
+                      <span>{pref.icon}</span>
+                      <span>{pref.label}</span>
+                      {isPatientMatch && pref.id !== 'All' && (
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
+                          isSelected ? 'bg-white/20 text-white' : 'bg-emerald-200 text-emerald-900'
+                        }`}>
+                          Patient Match
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Original Craving Biochemical Baseline Profile */}
-          {aiGeneratedPayload?.originalDish && (
+          {!errorMessage && aiGeneratedPayload?.originalDish && (
             <div className="bg-rose-50/70 rounded-2xl p-5 border border-rose-200 shadow-xs space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-rose-200/60">
                 <div className="flex items-center gap-2">
@@ -471,7 +508,7 @@ export const AiCopilotView: React.FC = () => {
                   </span>
                   <div>
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-700 block">
-                      Craving Baseline Analysis
+                      Identified Craving & Biochemical Profile
                     </span>
                     <h3 className="text-sm font-bold text-slate-900">
                       {aiGeneratedPayload.originalDish.name || cravingQuery}
@@ -515,158 +552,174 @@ export const AiCopilotView: React.FC = () => {
             </div>
           )}
 
-          {/* Comparative Food Swaps Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {(displayedSwaps || []).map((swap, idx) => {
-              const origCal = swap.originalMacros?.calories || swap.originalCalories || 650;
-              const swapCal = swap.swapMacros?.calories || swap.swapCalories || 300;
-              const origProt = swap.originalMacros?.protein || 10;
-              const swapProt = swap.swapMacros?.protein || swap.swapProteinGrams || 20;
-              const calSavings = swap.calorieSaving || Math.max(0, origCal - swapCal);
-              const proteinGain = swapProt - origProt;
-              const swapKey = `swap-${swap.id || idx}`;
+          {/* Comparative Food Swaps Grid with Full Recipe Triggers */}
+          {!errorMessage && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {(displayedSwaps || []).map((swap, idx) => {
+                const origCal = swap.originalMacros?.calories || swap.originalCalories || 650;
+                const swapCal = swap.swapMacros?.calories || swap.swapCalories || 300;
+                const origProt = swap.originalMacros?.protein || 10;
+                const swapProt = swap.swapMacros?.protein || swap.swapProteinGrams || 20;
+                const calSavings = swap.calorieSaving || Math.max(0, origCal - swapCal);
+                const proteinGain = swapProt - origProt;
+                const swapKey = `swap-${swap.id || idx}`;
 
-              const prefOption = PREFERENCE_OPTIONS.find(p => p.id.toLowerCase() === (swap.foodPreference || '').toLowerCase()) || {
-                icon: '🥗',
-                badgeColor: 'bg-teal-50 text-teal-800 border-teal-200'
-              };
+                const prefOption = PREFERENCE_OPTIONS.find(p => p.id.toLowerCase() === (swap.foodPreference || '').toLowerCase()) || {
+                  icon: '🥗',
+                  badgeColor: 'bg-teal-50 text-teal-800 border-teal-200'
+                };
 
-              const isPatientMatch = currentPatientPref.toLowerCase().includes((swap.foodPreference || '').toLowerCase());
+                const isPatientMatch = currentPatientPref.toLowerCase().includes((swap.foodPreference || '').toLowerCase());
 
-              const swapTitle = swap.swapOptionName || swap.clinicalSwap || 'Prescribed Clinical Swap';
-              const prepInstructions = swap.preparationTip || swap.instructions || 'Prepare with fresh clinical ingredients.';
-              const clinicalReason = swap.clinicalReason || swap.clinicalRationale || 'Preserves insulin sensitivity and optimizes metabolic flexibility.';
+                const swapTitle = swap.swapOptionName || swap.clinicalSwap || 'Prescribed Clinical Swap';
+                const prepInstructions = swap.preparationTip || swap.instructions || 'Prepare with fresh clinical ingredients.';
+                const clinicalReason = swap.clinicalReason || swap.clinicalRationale || 'Preserves insulin sensitivity and optimizes metabolic flexibility.';
+                const prepTime = swap.recipe?.prepTimeMinutes || swap.prepTimeMinutes || 10;
+                const cookTime = swap.recipe?.cookTimeMinutes || swap.cookTimeMinutes || 12;
+                const servings = swap.recipe?.servings || swap.servings || '1 serving';
 
-              return (
-                <div 
-                  key={swapKey} 
-                  className={`bg-white rounded-3xl border p-6 shadow-sm space-y-4 hover:shadow-md transition-all relative ${
-                    isPatientMatch 
-                      ? 'border-emerald-400 ring-2 ring-emerald-100 bg-linear-to-b from-emerald-50/20 to-white' 
-                      : 'border-slate-200'
-                  }`}
-                >
-                  
-                  {/* Top Bar: Food Preference Badge & Calorie Savings */}
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                return (
+                  <div 
+                    key={swapKey} 
+                    className={`bg-white rounded-3xl border p-6 shadow-sm space-y-4 hover:shadow-md transition-all relative flex flex-col justify-between ${
+                      isPatientMatch 
+                        ? 'border-emerald-400 ring-2 ring-emerald-100 bg-linear-to-b from-emerald-50/20 to-white' 
+                        : 'border-slate-200'
+                    }`}
+                  >
                     
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className={`text-xs font-black uppercase tracking-wider px-3 py-1 rounded-lg border flex items-center gap-1.5 ${prefOption.badgeColor}`}>
-                        <span>{prefOption.icon}</span>
-                        <span>{swap.foodPreference || 'Vegetarian'}</span>
-                      </span>
+                    <div className="space-y-4">
+                      {/* Top Bar: Food Preference Badge & Calorie Savings */}
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`text-xs font-black uppercase tracking-wider px-3 py-1 rounded-lg border flex items-center gap-1.5 ${prefOption.badgeColor}`}>
+                            <span>{prefOption.icon}</span>
+                            <span>{swap.foodPreference || 'Vegetarian'}</span>
+                          </span>
 
-                      {isPatientMatch && (
-                        <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white px-2 py-0.5 rounded-md flex items-center gap-1 shadow-xs">
-                          <Award className="w-3 h-3" />
-                          Patient Match
-                        </span>
-                      )}
-                    </div>
+                          {isPatientMatch && (
+                            <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white px-2 py-0.5 rounded-md flex items-center gap-1 shadow-xs">
+                              <Award className="w-3 h-3" />
+                              Patient Match
+                            </span>
+                          )}
+                        </div>
 
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 flex items-center gap-1 shadow-xs">
-                        <Flame className="w-3.5 h-3.5 text-emerald-600" /> Save {calSavings} kcal
-                      </span>
-                      {proteinGain > 0 && (
-                        <span className="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200">
-                          +{proteinGain}g Protein
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 flex items-center gap-1 shadow-xs">
+                            <Flame className="w-3.5 h-3.5 text-emerald-600" /> Save {calSavings} kcal
+                          </span>
+                          {proteinGain > 0 && (
+                            <span className="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200">
+                              +{proteinGain}g Protein
+                            </span>
+                          )}
+                        </div>
+                      </div>
 
-                  {/* Swap Title Header */}
-                  <div>
-                    <h3 className="text-base font-black text-slate-900 leading-snug">
-                      {swapTitle}
-                    </h3>
-                    <div className="flex items-center gap-2 text-xs text-slate-500 mt-1 flex-wrap">
-                      <span className="text-rose-600 font-semibold line-through">
-                        Craving: {swap.cravingOrDish}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Comparative Macro Snapshot Box */}
-                  <div className="grid grid-cols-4 gap-2 text-center text-xs p-3 bg-emerald-50/60 rounded-2xl border border-emerald-200">
-                    <div className="p-1.5 bg-white rounded-xl border border-emerald-100">
-                      <span className="text-[10px] text-slate-400 block font-semibold">Calories</span>
-                      <span className="font-black text-emerald-700 text-sm">{swapCal}</span>
-                    </div>
-                    <div className="p-1.5 bg-white rounded-xl border border-emerald-100">
-                      <span className="text-[10px] text-slate-400 block font-semibold">GI Level</span>
-                      <span className="font-bold text-emerald-600 text-sm">{swap.swapGlycemic || 'Low'}</span>
-                    </div>
-                    <div className="p-1.5 bg-white rounded-xl border border-emerald-100">
-                      <span className="text-[10px] text-slate-400 block font-semibold">Protein</span>
-                      <span className="font-bold text-teal-700 text-sm">{swapProt}g</span>
-                    </div>
-                    <div className="p-1.5 bg-white rounded-xl border border-emerald-100">
-                      <span className="text-[10px] text-slate-400 block font-semibold">Fiber</span>
-                      <span className="font-bold text-slate-800 text-sm">{swap.swapFiberGrams || 7}g</span>
-                    </div>
-                  </div>
-
-                  {/* Dietary Tags */}
-                  {(swap.dietaryTags && swap.dietaryTags.length > 0) && (
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {(swap.dietaryTags || []).map((tag, tIdx) => (
-                        <span key={tIdx} className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Preparation & Clinical Impact */}
-                  <div className="p-3.5 bg-slate-50 rounded-2xl space-y-2 text-xs border border-slate-100">
-                    <div className="font-semibold text-slate-800 flex items-start gap-1.5">
-                      <ChefHat className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
+                      {/* Swap Title Header */}
                       <div>
-                        <strong className="text-slate-900">Quick Prep:</strong> {prepInstructions}
+                        <h3 className="text-base font-black text-slate-900 leading-snug">
+                          {swapTitle}
+                        </h3>
+                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-1 flex-wrap">
+                          <span className="text-rose-600 font-semibold line-through">
+                            Craving: {swap.cravingOrDish}
+                          </span>
+                          <span className="flex items-center gap-1 text-slate-600 font-medium">
+                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                            {prepTime + cookTime} mins ({prepTime}m prep + {cookTime}m cook)
+                          </span>
+                          <span className="flex items-center gap-1 text-slate-600 font-medium">
+                            <Utensils className="w-3.5 h-3.5 text-slate-400" />
+                            {servings}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Comparative Macro Snapshot Box */}
+                      <div className="grid grid-cols-4 gap-2 text-center text-xs p-3 bg-emerald-50/60 rounded-2xl border border-emerald-200">
+                        <div className="p-1.5 bg-white rounded-xl border border-emerald-100">
+                          <span className="text-[10px] text-slate-400 block font-semibold">Calories</span>
+                          <span className="font-black text-emerald-700 text-sm">{swapCal}</span>
+                        </div>
+                        <div className="p-1.5 bg-white rounded-xl border border-emerald-100">
+                          <span className="text-[10px] text-slate-400 block font-semibold">GI Level</span>
+                          <span className="font-bold text-emerald-600 text-sm">{swap.swapGlycemic || 'Low'}</span>
+                        </div>
+                        <div className="p-1.5 bg-white rounded-xl border border-emerald-100">
+                          <span className="text-[10px] text-slate-400 block font-semibold">Protein</span>
+                          <span className="font-bold text-teal-700 text-sm">{swapProt}g</span>
+                        </div>
+                        <div className="p-1.5 bg-white rounded-xl border border-emerald-100">
+                          <span className="text-[10px] text-slate-400 block font-semibold">Fiber</span>
+                          <span className="font-bold text-slate-800 text-sm">{swap.swapFiberGrams || 7}g</span>
+                        </div>
+                      </div>
+
+                      {/* Key Ingredients Preview */}
+                      {(swap.keyIngredients && swap.keyIngredients.length > 0) && (
+                        <div className="space-y-1">
+                          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                            Key Ingredients:
+                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {(swap.keyIngredients || []).map((ing, iIdx) => (
+                              <span key={iIdx} className="text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded-md border border-slate-200 font-medium">
+                                {ing}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Clinical Impact */}
+                      <div className="p-3 bg-slate-50 rounded-2xl space-y-1 text-xs border border-slate-100">
+                        <p className="text-[11px] text-slate-700 leading-relaxed">
+                          <strong className="text-slate-900">Clinical Impact:</strong> {clinicalReason}
+                        </p>
                       </div>
                     </div>
 
-                    <p className="text-[11px] text-slate-600 leading-relaxed pl-5 border-l-2 border-teal-300">
-                      <strong className="text-slate-800">Clinical Impact:</strong> {clinicalReason}
-                    </p>
+                    {/* Action Bar with Recipe Viewer */}
+                    <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 mt-2">
+                      
+                      {/* View Recipe Button */}
+                      <button
+                        onClick={() => {
+                          setActiveRecipeSwap(swap);
+                          setCheckedIngredients({});
+                        }}
+                        className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+                      >
+                        <BookOpen className="w-3.5 h-3.5 text-teal-300" />
+                        View Full Recipe & Steps
+                      </button>
+
+                      {/* Chat / Dietitian Button */}
+                      <button
+                        onClick={() => handleSendToChat(
+                          isPatientSession
+                            ? `Hi Doctor! I'm craving ${swap.cravingOrDish}. Can I make this healthy swap: *${swapTitle}* (Saves ${calSavings} kcal, ${swapProt}g protein)?`
+                            : `🥗 Smart Food Swap for ${swap.cravingOrDish} (${swap.foodPreference}):\nCraving ${swap.cravingOrDish}? Swap it with ${swapTitle}! You'll save ${calSavings} calories, enjoy ${swapProt}g protein, and maintain optimal insulin sensitivity. Prep: ${prepInstructions}`,
+                          swapKey
+                        )}
+                        className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+                      >
+                        {sentToChatKey === swapKey ? <Check className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
+                        {sentToChatKey === swapKey ? 'Sent into Chat!' : isPatientSession ? 'Ask Dietitian About Swap' : 'Send to Patient'}
+                      </button>
+                    </div>
+
                   </div>
-
-                  {/* Action Bar */}
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
-                    <button
-                      onClick={() => handleCopy(
-                        `🥗 Clinical Food Swap for ${swap.cravingOrDish} (${swap.foodPreference}):\n➔ Prescribed: ${swapTitle}\n🔥 Calorie Savings: -${calSavings} kcal | +${proteinGain}g Protein (Low Glycemic Index)\n📝 Prep: ${prepInstructions}\n💡 Clinical Rationale: ${clinicalReason}`,
-                        swapKey
-                      )}
-                      className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 rounded-xl flex items-center gap-1.5 transition-colors border border-slate-200"
-                    >
-                      {copiedKey === swapKey ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                      {copiedKey === swapKey ? 'Copied' : 'Copy Recommendation'}
-                    </button>
-
-                    <button
-                      onClick={() => handleSendToChat(
-                        isPatientSession
-                          ? `Hi Doctor! I'm craving ${swap.cravingOrDish}. Can I make this healthy swap: *${swapTitle}* (Saves ${calSavings} kcal, ${swapProt}g protein)?`
-                          : `🥗 Smart Food Swap for ${swap.cravingOrDish} (${swap.foodPreference}):\nCraving ${swap.cravingOrDish}? Swap it with ${swapTitle}! You'll save ${calSavings} calories, enjoy ${swapProt}g protein, and maintain optimal insulin sensitivity. Prep: ${prepInstructions}`,
-                        swapKey
-                      )}
-                      className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
-                    >
-                      {sentToChatKey === swapKey ? <Check className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
-                      {sentToChatKey === swapKey ? 'Sent into Chat!' : isPatientSession ? 'Ask Dietitian About Swap' : 'Send to Patient'}
-                    </button>
-                  </div>
-
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Empty State */}
-          {displayedSwaps.length === 0 && (
+          {!errorMessage && displayedSwaps.length === 0 && (
             <div className="bg-white rounded-2xl p-12 border border-slate-200 text-center space-y-4">
               <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                 <Search className="w-6 h-6" />
@@ -680,16 +733,213 @@ export const AiCopilotView: React.FC = () => {
               <button
                 onClick={() => {
                   setSelectedPreference('All');
-                  setCravingQuery('Pizza');
-                  fetchSmartFoodSwaps('Pizza');
+                  setCravingQuery("I'm craving pizza");
+                  fetchSmartFoodSwaps("I'm craving pizza");
                 }}
-                className="px-4 py-2 bg-teal-600 text-white text-xs font-bold rounded-xl hover:bg-teal-700 transition-colors"
+                className="px-4 py-2 bg-teal-600 text-white text-xs font-bold rounded-xl hover:bg-teal-700 transition-colors cursor-pointer"
               >
                 Reset to Popular Swaps
               </button>
             </div>
           )}
 
+        </div>
+      )}
+
+      {/* =========================================================================
+          FULL RECIPE & COOKING INSTRUCTIONS MODAL
+          ========================================================================= */}
+      {activeRecipeSwap && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-4 bg-linear-to-r from-teal-50/60 to-white">
+              <div>
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-teal-600 text-white">
+                    {activeRecipeSwap.foodPreference || 'Vegetarian'} Recipe
+                  </span>
+                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md">
+                    🔥 Saves {activeRecipeSwap.calorieSaving || 300} kcal
+                  </span>
+                </div>
+                <h2 className="text-xl font-black text-slate-900">
+                  {activeRecipeSwap.recipe?.recipeName || activeRecipeSwap.swapOptionName}
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Healthier alternative for <strong className="text-rose-600 line-through">{activeRecipeSwap.cravingOrDish}</strong>
+                </p>
+              </div>
+
+              <button
+                onClick={() => setActiveRecipeSwap(null)}
+                className="p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6">
+              
+              {/* Quick Info Bar */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-xs">
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                  <span className="text-[10px] text-slate-400 block font-semibold uppercase">Prep Time</span>
+                  <span className="font-black text-slate-800 text-sm">
+                    ⏱️ {activeRecipeSwap.recipe?.prepTimeMinutes || activeRecipeSwap.prepTimeMinutes || 10} mins
+                  </span>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                  <span className="text-[10px] text-slate-400 block font-semibold uppercase">Cook Time</span>
+                  <span className="font-black text-slate-800 text-sm">
+                    🍳 {activeRecipeSwap.recipe?.cookTimeMinutes || activeRecipeSwap.cookTimeMinutes || 12} mins
+                  </span>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                  <span className="text-[10px] text-slate-400 block font-semibold uppercase">Serving Size</span>
+                  <span className="font-black text-slate-800 text-sm">
+                    🍽️ {activeRecipeSwap.recipe?.servings || activeRecipeSwap.servings || '1 serving'}
+                  </span>
+                </div>
+                <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200">
+                  <span className="text-[10px] text-emerald-600 block font-semibold uppercase">Protein</span>
+                  <span className="font-black text-emerald-800 text-sm">
+                    💪 {activeRecipeSwap.swapMacros?.protein || activeRecipeSwap.swapProteinGrams || 20}g
+                  </span>
+                </div>
+              </div>
+
+              {/* Complete Ingredients List */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                  <Utensils className="w-4 h-4 text-teal-600" />
+                  Ingredients & Quantities:
+                </h3>
+                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-2">
+                  {activeRecipeSwap.recipe?.ingredients && activeRecipeSwap.recipe.ingredients.length > 0 ? (
+                    activeRecipeSwap.recipe.ingredients.map((ing, idx) => {
+                      const isChecked = !!checkedIngredients[`${idx}`];
+                      return (
+                        <div 
+                          key={idx} 
+                          onClick={() => setCheckedIngredients(prev => ({ ...prev, [`${idx}`]: !prev[`${idx}`] }))}
+                          className={`flex items-start gap-3 p-2 rounded-xl transition-all cursor-pointer ${
+                            isChecked ? 'bg-emerald-50 text-slate-400 line-through' : 'hover:bg-white'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {}}
+                            className="mt-0.5 rounded text-teal-600 focus:ring-teal-500 cursor-pointer"
+                          />
+                          <div className="text-xs flex-1">
+                            <strong className="text-slate-900 font-bold">{ing.amount}</strong>{' '}
+                            <span className="text-slate-700">{ing.item}</span>
+                            {ing.notes && (
+                              <span className="text-[11px] text-teal-700 italic ml-1.5">({ing.notes})</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-xs text-slate-600">
+                      {activeRecipeSwap.preparationTip}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Step-by-Step Cooking Directions */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                  <ChefHat className="w-4 h-4 text-teal-600" />
+                  Step-by-Step Preparation Instructions:
+                </h3>
+                <div className="space-y-2.5">
+                  {activeRecipeSwap.recipe?.steps && activeRecipeSwap.recipe.steps.length > 0 ? (
+                    activeRecipeSwap.recipe.steps.map((step, sIdx) => (
+                      <div key={sIdx} className="flex items-start gap-3 p-3 bg-white rounded-2xl border border-slate-200 text-xs">
+                        <span className="w-6 h-6 rounded-full bg-teal-100 text-teal-900 font-black flex items-center justify-center shrink-0 text-xs">
+                          {sIdx + 1}
+                        </span>
+                        <p className="text-slate-700 leading-relaxed pt-0.5">
+                          {step}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 bg-white rounded-2xl border border-slate-200 text-xs text-slate-700 leading-relaxed">
+                      {activeRecipeSwap.preparationTip}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Optional Substitutions & Chef Tip */}
+              {(activeRecipeSwap.recipe?.optionalSubstitutions && activeRecipeSwap.recipe.optionalSubstitutions.length > 0) && (
+                <div className="p-4 bg-purple-50 rounded-2xl border border-purple-200 space-y-1 text-xs text-purple-950">
+                  <span className="font-bold flex items-center gap-1.5 text-purple-900">
+                    🔄 Optional Dietary Substitutions:
+                  </span>
+                  <ul className="list-disc list-inside space-y-0.5 pl-1 text-[11px] text-purple-900">
+                    {activeRecipeSwap.recipe.optionalSubstitutions.map((sub, i) => (
+                      <li key={i}>{sub}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {activeRecipeSwap.recipe?.chefTip && (
+                <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-950">
+                  <strong>👨‍🍳 Chef's Pro Tip:</strong> {activeRecipeSwap.recipe.chefTip}
+                </div>
+              )}
+
+              {/* Clinical Benefit Note */}
+              <div className="p-4 bg-teal-50 rounded-2xl border border-teal-200 text-xs text-teal-950 space-y-1">
+                <strong>💡 Clinical Medical Rationale:</strong>
+                <p className="text-[11px] text-teal-900 leading-relaxed">
+                  {activeRecipeSwap.clinicalReason || activeRecipeSwap.recipe?.clinicalBenefit}
+                </p>
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <button
+                onClick={() => {
+                  const ingredientsText = (activeRecipeSwap.recipe?.ingredients || []).map(i => `• ${i.amount} ${i.item}`).join('\n');
+                  const stepsText = (activeRecipeSwap.recipe?.steps || []).map((s, idx) => `${idx + 1}. ${s}`).join('\n');
+                  const fullText = `👩‍🍳 RECIPE: ${activeRecipeSwap.recipe?.recipeName || activeRecipeSwap.swapOptionName}\n\n🥗 INGREDIENTS:\n${ingredientsText}\n\n🍳 INSTRUCTIONS:\n${stepsText}\n\n⏱️ Total Time: ${(activeRecipeSwap.recipe?.prepTimeMinutes || 10) + (activeRecipeSwap.recipe?.cookTimeMinutes || 12)} mins | Calories: ${activeRecipeSwap.swapCalories} kcal (${activeRecipeSwap.swapProteinGrams}g Protein)`;
+                  handleCopy(fullText, 'modal-recipe-copy');
+                }}
+                className="px-4 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                {copiedKey === 'modal-recipe-copy' ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                {copiedKey === 'modal-recipe-copy' ? 'Recipe Copied!' : 'Copy Full Recipe'}
+              </button>
+
+              <button
+                onClick={() => {
+                  handleSendToChat(
+                    `👩‍🍳 Here is the full recipe for *${activeRecipeSwap.recipe?.recipeName || activeRecipeSwap.swapOptionName}*:\nPrep: ${activeRecipeSwap.recipe?.prepTimeMinutes || 10}m, Cook: ${activeRecipeSwap.recipe?.cookTimeMinutes || 12}m\nNutrition: ${activeRecipeSwap.swapCalories} kcal, ${activeRecipeSwap.swapProteinGrams}g Protein (Saves ${activeRecipeSwap.calorieSaving} kcal)`,
+                    'modal-recipe-chat'
+                  );
+                  setActiveRecipeSwap(null);
+                }}
+                className="px-5 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Send className="w-4 h-4" />
+                {isPatientSession ? 'Send Recipe to Dietitian Chat' : 'Send Recipe to Patient'}
+              </button>
+            </div>
+
+          </div>
         </div>
       )}
 
@@ -779,7 +1029,7 @@ export const AiCopilotView: React.FC = () => {
                         `🌿 Clinical Nutrition Note regarding ${gap.nutrient}: Your current intake is at ${cur}${gap.unit || 'mg'}/day (Target: ${rda}${gap.unit || 'mg'}). To reverse associated fatigue/sluggishness, incorporate: ${(gap.recommendedSuperfoods || []).join(', ')}.`,
                         `gap-${gap.id || idx}`
                       )}
-                      className="w-full py-2 bg-white hover:bg-teal-50 text-teal-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                      className="w-full py-2 bg-white hover:bg-teal-50 text-teal-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                     >
                       <Send className="w-3.5 h-3.5 text-teal-600" />
                       Send Supplementation Advice to Chat
@@ -816,7 +1066,7 @@ export const AiCopilotView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setMotivationTone('celebratory')}
-                className={`w-full p-3 rounded-xl border text-left transition-all ${
+                className={`w-full p-3 rounded-xl border text-left transition-all cursor-pointer ${
                   motivationTone === 'celebratory'
                     ? 'bg-emerald-50 border-emerald-500 text-emerald-950 font-bold shadow-xs'
                     : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
@@ -831,7 +1081,7 @@ export const AiCopilotView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setMotivationTone('empathetic')}
-                className={`w-full p-3 rounded-xl border text-left transition-all ${
+                className={`w-full p-3 rounded-xl border text-left transition-all cursor-pointer ${
                   motivationTone === 'empathetic'
                     ? 'bg-teal-50 border-teal-500 text-teal-950 font-bold shadow-xs'
                     : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
@@ -846,7 +1096,7 @@ export const AiCopilotView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setMotivationTone('strict_discipline')}
-                className={`w-full p-3 rounded-xl border text-left transition-all ${
+                className={`w-full p-3 rounded-xl border text-left transition-all cursor-pointer ${
                   motivationTone === 'strict_discipline'
                     ? 'bg-amber-50 border-amber-500 text-amber-950 font-bold shadow-xs'
                     : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
@@ -887,7 +1137,7 @@ export const AiCopilotView: React.FC = () => {
             <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
               <button
                 onClick={() => handleCopy(generatedMotivation, 'gen-mot')}
-                className="px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 rounded-xl flex items-center gap-1.5 transition-colors"
+                className="px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
               >
                 {copiedKey === 'gen-mot' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                 {copiedKey === 'gen-mot' ? 'Copied to Clipboard' : 'Copy Text'}
@@ -895,7 +1145,7 @@ export const AiCopilotView: React.FC = () => {
 
               <button
                 onClick={() => handleSendToChat(generatedMotivation, 'gen-mot-chat')}
-                className="px-5 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs flex items-center gap-1.5 transition-all"
+                className="px-5 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 {sentToChatKey === 'gen-mot-chat' ? <Check className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
                 {sentToChatKey === 'gen-mot-chat' ? 'Sent into WhatsApp Chat!' : 'Send into Patient Chat'}
@@ -923,7 +1173,7 @@ export const AiCopilotView: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handleCopy(generatedSoap, 'soap-copy')}
-                className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center gap-1 transition-colors"
+                className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center gap-1 transition-colors cursor-pointer"
               >
                 {copiedKey === 'soap-copy' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                 {copiedKey === 'soap-copy' ? 'Copied' : 'Copy SOAP Digest'}
@@ -942,7 +1192,7 @@ export const AiCopilotView: React.FC = () => {
             </span>
             <button
               onClick={() => navigateTo('patient_profile', { patientId: currentPatient?.id })}
-              className="font-bold underline hover:text-teal-950"
+              className="font-bold underline hover:text-teal-950 cursor-pointer"
             >
               Attach to Medical File ➔
             </button>
