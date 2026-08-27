@@ -1781,11 +1781,12 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     mediaUrl?: string; 
     mediaMeta?: any 
   }): ChatMessage => {
-    const sender = input.sender || 'doctor';
-    const targetPatient = allPatients.find(p => p.id === input.patientId) || selectedPatient;
+    const sender: 'doctor' | 'patient' = isPatientSession ? 'patient' : (input.sender || 'doctor');
+    const targetPatient = allPatients.find(p => p.id === input.patientId) || loggedInPatient || selectedPatient;
     const senderName = sender === 'doctor' 
       ? (currentUser?.name || 'Dr. Ashmita Joshi') 
       : (targetPatient?.name || 'Patient');
+    const senderRole = sender === 'doctor' ? (currentUser?.roleTitle || 'Clinical Dietitian') : 'Patient';
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const dateStr = now.toISOString().split('T')[0];
@@ -1797,7 +1798,7 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       clinicId: currentClinic.id,
       sender,
       senderName,
-      senderRole: sender === 'doctor' ? (currentUser?.roleTitle || 'Clinical Dietitian') : undefined,
+      senderRole,
       timestamp: `Today, ${timeStr}`,
       date: dateStr,
       createdAt: nowMs,
@@ -1805,7 +1806,7 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       type: input.type || 'text',
       mediaUrl: input.mediaUrl,
       mediaMeta: input.mediaMeta,
-      isRead: sender === 'doctor', // Marked unread if from patient for clinician notification
+      isRead: sender === 'doctor' && !isPatientSession, // Marked unread if sent to doctor
       status: 'delivered'
     };
 

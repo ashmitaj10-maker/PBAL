@@ -12,17 +12,19 @@ import {
   Check, 
   CheckCheck, 
   User, 
-  Phone, 
-  MoreVertical, 
-  Smile, 
   ExternalLink,
   ChevronRight,
   ShieldCheck,
-  Bot
+  Bot,
+  Stethoscope,
+  Utensils,
+  Flame,
+  Clock,
+  Heart
 } from 'lucide-react';
 import { ChatMessage } from '../../types/clinic';
 
-const CANNED_REPLIES = [
+const DOCTOR_CANNED_REPLIES = [
   'Great plate balance! Lean protein and high fiber well executed. 🥗',
   'Please hydrate with 500ml of room-temp water before this meal. 💧',
   'Ensure dinner is finished by 8:00 PM for optimal circadian insulin sensitivity. 🌙',
@@ -31,10 +33,10 @@ const CANNED_REPLIES = [
 ];
 
 const PATIENT_QUICK_REPLIES = [
-  'Thank you Doctor, feeling very energetic today! ✨',
-  'Fasting weight is down another 300g this morning! ⚖️',
-  'Followed the dining-out advice, felt completely satisfied! 🥗',
+  'Can I have fruit after dinner? 🍎',
+  'What fruits would you suggest? 🍓',
   'Quick question about afternoon snack options around 4 PM 🍵',
+  'Fasting weight is down another 300g this morning! ⚖️',
   'Completed today’s prescribed 35-min metabolic routine! 🏃‍♀️'
 ];
 
@@ -48,24 +50,37 @@ export const PatientChatView: React.FC = () => {
     markChatAsRead, 
     getAllConversationsSummary,
     generateCopilotMotivation,
-    navigateTo 
+    navigateTo,
+    isPatientSession,
+    loggedInPatient,
+    currentUser,
+    users
   } = useClinic();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTab, setFilterTab] = useState<'all' | 'unread'>('all');
   const [inputText, setInputText] = useState('');
-  const [senderRole, setSenderRole] = useState<'doctor' | 'patient'>('doctor');
+  const [senderRole, setSenderRole] = useState<'doctor' | 'patient'>(isPatientSession ? 'patient' : 'doctor');
   const [isCopilotPromptOpen, setIsCopilotPromptOpen] = useState(false);
   const [isAttachOpen, setIsAttachOpen] = useState(false);
+  const [isDietitianTyping, setIsDietitianTyping] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const currentPatient = selectedPatient || patients[0];
-  const conversations = getAllConversationsSummary();
+  const currentPatient = isPatientSession 
+    ? (loggedInPatient || selectedPatient || patients[0])
+    : (selectedPatient || patients[0]);
 
+  const assignedDietitian = (users || []).find(u => u.id === currentPatient?.assignedDoctorId) || {
+    name: 'Dr. Ashmita Joshi',
+    roleTitle: 'Chief Clinical Dietitian',
+    specialization: 'Metabolic Health & Clinical Nutrition'
+  };
+
+  const conversations = getAllConversationsSummary();
   const currentMessages = currentPatient ? getPatientChatMessages(currentPatient.id) : [];
 
-  // Filter conversations
+  // Filter conversations for Doctor view
   const filteredConversations = (conversations || []).filter(c => {
     if (filterTab === 'unread' && c.unreadCount === 0) return false;
     if (searchQuery.trim()) {
@@ -75,51 +90,101 @@ export const PatientChatView: React.FC = () => {
     return true;
   });
 
-  // Mark as read when patient is selected
+  // Mark as read when patient conversation is active
   useEffect(() => {
     if (currentPatient) {
       markChatAsRead(currentPatient.id);
     }
   }, [currentPatient?.id]);
 
+  // Keep senderRole synced with session
+  useEffect(() => {
+    setSenderRole(isPatientSession ? 'patient' : 'doctor');
+  }, [isPatientSession]);
+
   // Scroll to bottom when messages update
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [currentMessages.length]);
+  }, [currentMessages.length, isDietitianTyping]);
+
+  // Simulated live clinical reply for patient inquiries
+  const triggerSimulatedDietitianResponse = (patientQuestion: string, patientId: string) => {
+    const q = (patientQuestion || '').toLowerCase();
+    let replyText = '';
+
+    if (q.includes('fruit') && (q.includes('after dinner') || q.includes('night') || q.includes('late'))) {
+      replyText = `Yes, you can have fruit after dinner! 🍓 I'd recommend low-glycemic fruits such as fresh strawberries, blueberries, or a small green apple with a pinch of cinnamon. Avoid high-sugar fruits like mangoes, chickoo, or grapes late in the evening to prevent insulin spikes before sleep.`;
+    } else if (q.includes('fruit') && (q.includes('suggest') || q.includes('what') || q.includes('which'))) {
+      replyText = `The best metabolic fruits for your protocol are: 1) Berries (strawberries, blueberries), 2) Papaya (rich in digestive papain), 3) Kiwi, and 4) Guava. They offer high polyphenol density and prebiotic fiber with minimal glucose impact. 🍎`;
+    } else if (q.includes('snack') || q.includes('4 pm') || q.includes('afternoon')) {
+      replyText = `For your 4 PM snack window, here are 3 great options:\n1) Air-fried spiced makhana (foxnuts) with green tea 🍵\n2) 25g roasted chana or edamame crunch\n3) Cucumber slices with 2 tbsp fresh hummus. This keeps your satiety high without an energy crash!`;
+    } else if (q.includes('weight') || q.includes('300g') || q.includes('scale') || q.includes('down')) {
+      replyText = `Fantastic progress! 🎉 Dropping weight steadily while keeping your energy up shows your body is tapping into stored visceral fat. Continue logging your 2.5L water today!`;
+    } else if (q.includes('routine') || q.includes('workout') || q.includes('exercise') || q.includes('walk')) {
+      replyText = `Excellent effort on completing your movement session! 💪 Make sure to rehydrate with 500ml water and ensure your next meal contains at least 25g of protein for muscle recovery.`;
+    } else {
+      replyText = `Thank you for the update! I have reviewed this and noted it in your clinical chart. Keep up the steady consistency, and let me know if you need any adjustments to your meal plan! 🌟`;
+    }
+
+    setIsDietitianTyping(true);
+    setTimeout(() => {
+      setIsDietitianTyping(false);
+      sendChatMessage({
+        patientId,
+        content: replyText,
+        type: 'text',
+        sender: 'doctor'
+      });
+    }, 1200);
+  };
 
   const handleSendMessage = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const textToSend = inputText.trim();
     if (!textToSend || !currentPatient) return;
 
+    const activeSender = isPatientSession ? 'patient' : senderRole;
+
     sendChatMessage({
       patientId: currentPatient.id,
       content: textToSend,
       type: 'text',
-      sender: senderRole
+      sender: activeSender
     });
 
     setInputText('');
+
+    if (isPatientSession) {
+      triggerSimulatedDietitianResponse(textToSend, currentPatient.id);
+    }
+
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 50);
   };
 
-  const handleSendCanned = (text: string, asSender: 'doctor' | 'patient' = 'doctor') => {
+  const handleSendCanned = (text: string) => {
     if (!currentPatient) return;
+    const activeSender = isPatientSession ? 'patient' : senderRole;
+
     sendChatMessage({
       patientId: currentPatient.id,
       content: text,
       type: 'text',
-      sender: asSender
+      sender: activeSender
     });
+
+    if (isPatientSession) {
+      triggerSimulatedDietitianResponse(text, currentPatient.id);
+    }
+
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 50);
   };
 
   const handleSendCopilotMotivation = (tone: 'celebratory' | 'empathetic' | 'strict_discipline') => {
-    if (!currentPatient) return;
+    if (!currentPatient || isPatientSession) return;
     const msg = generateCopilotMotivation(currentPatient.id, tone);
     sendChatMessage({
       patientId: currentPatient.id,
@@ -140,9 +205,11 @@ export const PatientChatView: React.FC = () => {
     if (type === 'photo') {
       sendChatMessage({
         patientId: currentPatient.id,
-        content: 'Clinical Assessment & Meal Plate Review.',
+        content: isPatientSession 
+          ? 'Here is a photo of my lunch plate for review!' 
+          : 'Clinical Assessment & Meal Plate Review.',
         type: 'photo',
-        sender: 'doctor',
+        sender: isPatientSession ? 'patient' : 'doctor',
         mediaUrl: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&q=80&w=600'
       });
     } else if (type === 'pdf') {
@@ -165,175 +232,245 @@ export const PatientChatView: React.FC = () => {
     }
   };
 
+  // Helper to determine whether a message was sent by the CURRENT viewing user
+  const isMessageFromCurrentUser = (msg: ChatMessage) => {
+    if (isPatientSession) {
+      return msg.sender === 'patient';
+    }
+    return msg.sender === 'doctor';
+  };
+
   return (
     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden h-[calc(100vh-140px)] min-h-[620px] flex flex-col md:flex-row animate-in fade-in duration-200">
       
-      {/* Left Sidebar: Conversations List */}
-      <div className="w-full md:w-80 lg:w-96 border-r border-slate-200 flex flex-col bg-slate-50/70 shrink-0">
-        
-        {/* Sidebar Header */}
-        <div className="p-4 border-b border-slate-200 bg-white space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-teal-600" />
-              Patient Chats
-            </h2>
-            <span className="text-[11px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
-              In-App Chat
-            </span>
-          </div>
+      {/* =========================================================================
+          LEFT SIDEBAR: CONVERSATIONS LIST (DOCTOR VIEW ONLY)
+          ========================================================================= */}
+      {!isPatientSession && (
+        <div className="w-full md:w-80 lg:w-96 border-r border-slate-200 flex flex-col bg-slate-50/70 shrink-0">
+          
+          {/* Sidebar Header */}
+          <div className="p-4 border-b border-slate-200 bg-white space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-teal-600" />
+                Patient Conversations
+              </h2>
+              <span className="text-[11px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
+                Doctor Inbox
+              </span>
+            </div>
 
-          {/* Search Box */}
-          <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-            <input
-              type="text"
-              placeholder="Search patients or codes..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full text-xs pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-teal-500 transition-all"
-            />
-          </div>
+            {/* Search Box */}
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="Search patients by name or code..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full text-xs pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-teal-500 transition-all"
+              />
+            </div>
 
-          {/* Filter Pills */}
-          <div className="flex items-center gap-2 text-xs">
-            <button
-              onClick={() => setFilterTab('all')}
-              className={`flex-1 py-1.5 rounded-lg font-bold transition-all text-center ${
-                filterTab === 'all' ? 'bg-teal-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              All ({conversations.length})
-            </button>
-            <button
-              onClick={() => setFilterTab('unread')}
-              className={`flex-1 py-1.5 rounded-lg font-bold transition-all text-center flex items-center justify-center gap-1 ${
-                filterTab === 'unread' ? 'bg-teal-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              Unread
-              {conversations.filter(c => c.unreadCount > 0).length > 0 && (
-                <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center">
-                  {conversations.filter(c => c.unreadCount > 0).length}
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Conversation List */}
-        <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-          {(filteredConversations || []).map((conv) => {
-            const isSelected = conv.patientId === currentPatient?.id;
-            return (
-              <div
-                key={conv.patientId}
-                onClick={() => setSelectedPatientId(conv.patientId)}
-                className={`p-3.5 flex items-start gap-3 cursor-pointer transition-all ${
-                  isSelected ? 'bg-teal-50/80 border-l-4 border-l-teal-600' : 'hover:bg-white'
+            {/* Filter Pills */}
+            <div className="flex items-center gap-2 text-xs">
+              <button
+                onClick={() => setFilterTab('all')}
+                className={`flex-1 py-1.5 rounded-lg font-bold transition-all text-center ${
+                  filterTab === 'all' ? 'bg-teal-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                {/* Avatar with Online indicator */}
-                <div className="relative shrink-0 mt-0.5">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-teal-700 to-emerald-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
-                    {(conv.patientName || '').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2) || 'PT'}
-                  </div>
-                  {conv.isOnline && (
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
-                  )}
-                </div>
+                All ({conversations.length})
+              </button>
+              <button
+                onClick={() => setFilterTab('unread')}
+                className={`flex-1 py-1.5 rounded-lg font-bold transition-all text-center flex items-center justify-center gap-1 ${
+                  filterTab === 'unread' ? 'bg-teal-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                Unread
+                {conversations.filter(c => c.unreadCount > 0).length > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center">
+                    {conversations.filter(c => c.unreadCount > 0).length}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-1 mb-0.5">
-                    <h4 className="text-xs font-bold text-slate-900 truncate">{conv.patientName}</h4>
-                    <span className="text-[10px] text-slate-400 shrink-0 font-mono">{conv.lastMessageTimestamp}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-1">
-                    <p className="text-xs text-slate-500 truncate leading-relaxed">
-                      {conv.lastMessage}
-                    </p>
-                    {conv.unreadCount > 0 && (
-                      <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
-                        {conv.unreadCount}
-                      </span>
+          {/* Conversation List */}
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+            {(filteredConversations || []).map((conv) => {
+              const isSelected = conv.patientId === currentPatient?.id;
+              return (
+                <div
+                  key={conv.patientId}
+                  onClick={() => setSelectedPatientId(conv.patientId)}
+                  className={`p-3.5 flex items-start gap-3 cursor-pointer transition-all ${
+                    isSelected ? 'bg-teal-50/80 border-l-4 border-l-teal-600' : 'hover:bg-white'
+                  }`}
+                >
+                  {/* Avatar with Online indicator */}
+                  <div className="relative shrink-0 mt-0.5">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-teal-700 to-emerald-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                      {(conv.patientName || '').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2) || 'PT'}
+                    </div>
+                    {conv.isOnline && (
+                      <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
                     )}
                   </div>
 
-                  <span className="inline-block text-[10px] text-slate-400 font-mono mt-0.5">
-                    {conv.patientCode}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1 mb-0.5">
+                      <h4 className="text-xs font-bold text-slate-900 truncate">{conv.patientName}</h4>
+                      <span className="text-[10px] text-slate-400 shrink-0 font-mono">{conv.lastMessageTimestamp}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-1">
+                      <p className="text-xs text-slate-500 truncate leading-relaxed">
+                        {conv.lastMessage}
+                      </p>
+                      {conv.unreadCount > 0 && (
+                        <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                          {conv.unreadCount}
+                        </span>
+                      )}
+                    </div>
+
+                    <span className="inline-block text-[10px] text-slate-400 font-mono mt-0.5">
+                      {conv.patientCode}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+
         </div>
+      )}
 
-      </div>
-
-      {/* Right Pane: WhatsApp Style Active Chat Area */}
-      <div className="flex-1 flex flex-col bg-[#efeae2]/40 relative overflow-hidden">
+      {/* =========================================================================
+          RIGHT PANE: TWO-WAY CHAT CANVAS (ADAPTED BY ROLE)
+          ========================================================================= */}
+      <div className="flex-1 flex flex-col bg-[#efeae2]/30 relative overflow-hidden">
         
         {/* Chat Top Header */}
-        <div className="p-3.5 bg-white border-b border-slate-200 flex items-center justify-between shadow-xs z-10">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-teal-700 to-emerald-600 text-white font-bold text-xs flex items-center justify-center">
-                {currentPatient?.name ? currentPatient.name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2) : 'PT'}
+        <div className="p-3.5 sm:p-4 bg-white border-b border-slate-200 flex items-center justify-between shadow-xs z-10">
+          
+          {isPatientSession ? (
+            /* Patient View Header: Talking to Dietitian */
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-700 text-white font-bold text-sm flex items-center justify-center shadow-xs">
+                  👩‍⚕️
+                </div>
+                <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full animate-pulse" />
               </div>
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
-            </div>
 
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-slate-900">{currentPatient?.name || 'Select a Patient'}</h3>
-                {currentPatient?.patientCode && (
-                  <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">
-                    {currentPatient.patientCode}
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-black text-slate-900">
+                    {assignedDietitian?.name || 'Dr. Ashmita Joshi'}
+                  </h3>
+                  <span className="text-[10px] bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-full font-bold">
+                    Clinical Dietitian
                   </span>
-                )}
+                </div>
+                <p className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Online • Perfect Body & Life Clinical Team
+                </p>
               </div>
-              <p className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Online in In-App Chat • {currentPatient?.primaryGoal ? currentPatient.primaryGoal.replace('_', ' ') : 'General Care'}
-              </p>
             </div>
-          </div>
+          ) : (
+            /* Doctor View Header: Talking to Patient */
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-teal-700 to-emerald-600 text-white font-bold text-xs flex items-center justify-center">
+                  {currentPatient?.name ? currentPatient.name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2) : 'PT'}
+                </div>
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-slate-900">{currentPatient?.name || 'Select a Patient'}</h3>
+                  {currentPatient?.patientCode && (
+                    <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono font-bold">
+                      {currentPatient.patientCode}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Online in In-App Chat • Goal: {currentPatient?.primaryGoals?.[0] || 'Metabolic Health'}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Quick Context Action Links */}
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigateTo('patient_profile', { patientId: currentPatient?.id })}
-              className="hidden sm:flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
-            >
-              <User className="w-3.5 h-3.5 text-teal-600" />
-              Profile
-            </button>
+            {isPatientSession ? (
+              <>
+                <button
+                  onClick={() => navigateTo('patient_portal')}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+                >
+                  <Utensils className="w-3.5 h-3.5 text-teal-600" />
+                  My Diet Plan
+                </button>
 
-            <button
-              onClick={() => navigateTo('ai_copilot', { patientId: currentPatient?.id })}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition-colors"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-              AI Copilot
-            </button>
+                <button
+                  onClick={() => navigateTo('ai_copilot')}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition-colors cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+                  Craving Search
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => navigateTo('patient_profile', { patientId: currentPatient?.id })}
+                  className="hidden sm:flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+                >
+                  <User className="w-3.5 h-3.5 text-teal-600" />
+                  Profile
+                </button>
+
+                <button
+                  onClick={() => navigateTo('ai_copilot', { patientId: currentPatient?.id })}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition-colors cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+                  Doctor AI Copilot
+                </button>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Messages Scroll Area with WhatsApp-style background pattern */}
+        {/* Messages Scroll Area */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
           
           {/* Encryption / HIPAA clinical security notice */}
           <div className="flex justify-center">
-            <div className="bg-amber-50 border border-amber-200/80 rounded-xl px-3.5 py-1.5 text-[11px] text-amber-800 flex items-center gap-1.5 shadow-2xs text-center max-w-md">
+            <div className="bg-amber-50 border border-amber-200/80 rounded-xl px-3.5 py-1.5 text-[11px] text-amber-900 flex items-center gap-1.5 shadow-2xs text-center max-w-md">
               <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Messages are secure & synced live between doctors, assistants, and the patient.</span>
+              <span>
+                {isPatientSession 
+                  ? 'Your messages are private and reviewed directly by Dr. Ashmita Joshi.' 
+                  : 'Messages are secure & synced live between doctors, assistants, and the patient.'}
+              </span>
             </div>
           </div>
 
-          {/* Messages */}
+          {/* Render Chronological Messages with Correct Perspective */}
           {(currentMessages || []).map((msg) => {
-            const isMe = msg.sender === 'doctor';
+            const isMe = isMessageFromCurrentUser(msg);
+
             return (
               <div
                 key={msg.id}
@@ -346,12 +483,18 @@ export const PatientChatView: React.FC = () => {
                       : 'bg-white text-slate-900 rounded-tl-xs border border-slate-200/80'
                   }`}
                 >
-                  {/* Sender title if patient */}
-                  {!isMe && (
-                    <div className="text-[10px] font-bold text-teal-700">
-                      {msg.senderName || currentPatient?.name}
-                    </div>
-                  )}
+                  {/* Sender Header Label */}
+                  <div className="text-[10px] font-black uppercase tracking-wider flex items-center justify-between gap-2">
+                    {isMe ? (
+                      <span className="text-emerald-800">You ({isPatientSession ? 'Patient' : 'Doctor'})</span>
+                    ) : (
+                      <span className="text-teal-700">
+                        {isPatientSession 
+                          ? `${assignedDietitian?.name || 'Dr. Ashmita Joshi'} (Clinical Dietitian)` 
+                          : `${msg.senderName || currentPatient?.name || 'Patient'} (Patient)`}
+                      </span>
+                    )}
+                  </div>
 
                   {/* Message Photo Content */}
                   {msg.type === 'photo' && msg.mediaUrl && (
@@ -413,23 +556,37 @@ export const PatientChatView: React.FC = () => {
             );
           })}
 
+          {/* Typing Indicator for simulated responses */}
+          {isDietitianTyping && (
+            <div className="flex flex-col items-start animate-in fade-in duration-200">
+              <div className="bg-white rounded-2xl px-4 py-2.5 border border-slate-200/80 shadow-xs flex items-center gap-2">
+                <span className="text-xs text-teal-700 font-bold">Dr. Ashmita is typing</span>
+                <span className="flex gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </span>
+              </div>
+            </div>
+          )}
+
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Quick Canned Suggestions Chips Bar */}
+        {/* Quick Suggestions Chips Bar */}
         <div className="px-4 py-2 bg-white/90 border-t border-slate-200 overflow-x-auto flex items-center gap-2 no-scrollbar">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">
-            {senderRole === 'doctor' ? 'Clinical Nudges:' : 'Patient Quick Replies:'}
+            {isPatientSession ? '💡 Ask Your Dietitian:' : 'Clinical Nudges:'}
           </span>
-          {(senderRole === 'doctor' ? CANNED_REPLIES : PATIENT_QUICK_REPLIES).map((canned, idx) => (
+          {(isPatientSession ? PATIENT_QUICK_REPLIES : DOCTOR_CANNED_REPLIES).map((canned, idx) => (
             <button
               key={idx}
               type="button"
-              onClick={() => handleSendCanned(canned, senderRole)}
-              className={`text-xs px-3 py-1 rounded-full whitespace-nowrap transition-colors shrink-0 font-medium border ${
-                senderRole === 'doctor'
-                  ? 'text-slate-700 bg-slate-100 hover:bg-teal-50 hover:text-teal-900 hover:border-teal-200 border-slate-200'
-                  : 'text-emerald-900 bg-emerald-50/80 hover:bg-emerald-100 border-emerald-200'
+              onClick={() => handleSendCanned(canned)}
+              className={`text-xs px-3 py-1 rounded-full whitespace-nowrap transition-colors shrink-0 font-medium border cursor-pointer ${
+                isPatientSession
+                  ? 'text-emerald-950 bg-emerald-50 hover:bg-emerald-100 border-emerald-300 font-bold shadow-2xs'
+                  : 'text-slate-700 bg-slate-100 hover:bg-teal-50 hover:text-teal-900 hover:border-teal-200 border-slate-200'
               }`}
             >
               {canned}
@@ -440,41 +597,43 @@ export const PatientChatView: React.FC = () => {
         {/* Input Bar & Attachment Menus */}
         <div className="p-3.5 bg-white border-t border-slate-200 relative">
           
-          {/* Sender Role Mode Switcher */}
-          <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-semibold text-slate-500">Send as:</span>
-              <button
-                type="button"
-                onClick={() => setSenderRole('doctor')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  senderRole === 'doctor'
-                    ? 'bg-teal-700 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                🩺 Doctor (Dr. Ashmita)
-              </button>
-              <button
-                type="button"
-                onClick={() => setSenderRole('patient')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  senderRole === 'patient'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                👤 Patient ({currentPatient?.name ? currentPatient.name.split(' ')[0] : 'Patient'})
-              </button>
-            </div>
+          {/* Doctor Controls (Only visible to Doctors) */}
+          {!isPatientSession && (
+            <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-semibold text-slate-500">Send as:</span>
+                <button
+                  type="button"
+                  onClick={() => setSenderRole('doctor')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    senderRole === 'doctor'
+                      ? 'bg-teal-700 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  🩺 Doctor (Dr. Ashmita)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSenderRole('patient')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    senderRole === 'patient'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  👤 Patient Simulation ({currentPatient?.name ? currentPatient.name.split(' ')[0] : 'Patient'})
+                </button>
+              </div>
 
-            <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">
-              {senderRole === 'doctor' ? 'Clinical Outgoing' : 'Patient Incoming Simulation'}
-            </span>
-          </div>
+              <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">
+                {senderRole === 'doctor' ? 'Clinical Outgoing' : 'Patient Incoming Simulation'}
+              </span>
+            </div>
+          )}
           
-          {/* AI Copilot Motivation Generator Popover */}
-          {isCopilotPromptOpen && (
+          {/* AI Copilot Motivation Generator Popover (Doctor Only) */}
+          {!isPatientSession && isCopilotPromptOpen && (
             <div className="absolute bottom-20 left-4 right-4 sm:right-auto sm:w-96 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 space-y-3 z-30 animate-in slide-in-from-bottom-2">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
@@ -484,7 +643,7 @@ export const PatientChatView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsCopilotPromptOpen(false)}
-                  className="text-slate-400 hover:text-slate-700 text-xs font-bold"
+                  className="text-slate-400 hover:text-slate-700 text-xs font-bold cursor-pointer"
                 >
                   ✕
                 </button>
@@ -495,7 +654,7 @@ export const PatientChatView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleSendCopilotMotivation('celebratory')}
-                  className="w-full text-left p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/70 text-xs font-bold text-emerald-950 transition-colors"
+                  className="w-full text-left p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/70 text-xs font-bold text-emerald-950 transition-colors cursor-pointer"
                 >
                   🌟 Celebratory Milestone
                   <span className="block font-normal text-[10px] text-emerald-800">Celebrates fat loss and consistent habit tracking</span>
@@ -504,7 +663,7 @@ export const PatientChatView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleSendCopilotMotivation('empathetic')}
-                  className="w-full text-left p-2.5 rounded-xl border border-teal-200 bg-teal-50/50 hover:bg-teal-100/70 text-xs font-bold text-teal-950 transition-colors"
+                  className="w-full text-left p-2.5 rounded-xl border border-teal-200 bg-teal-50/50 hover:bg-teal-100/70 text-xs font-bold text-teal-950 transition-colors cursor-pointer"
                 >
                   🌱 Empathetic Stress Reset
                   <span className="block font-normal text-[10px] text-teal-800">For missed logs, emotional eating, or plateaus</span>
@@ -513,7 +672,7 @@ export const PatientChatView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleSendCopilotMotivation('strict_discipline')}
-                  className="w-full text-left p-2.5 rounded-xl border border-amber-200 bg-amber-50/50 hover:bg-amber-100/70 text-xs font-bold text-amber-950 transition-colors"
+                  className="w-full text-left p-2.5 rounded-xl border border-amber-200 bg-amber-50/50 hover:bg-amber-100/70 text-xs font-bold text-amber-950 transition-colors cursor-pointer"
                 >
                   🎯 Accountability & Non-Negotiables
                   <span className="block font-normal text-[10px] text-amber-800">Firm reminder on water, protein splits & steps</span>
@@ -528,27 +687,32 @@ export const PatientChatView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleSendMedia('photo')}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-teal-50 hover:text-teal-900 transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-teal-50 hover:text-teal-900 transition-colors cursor-pointer"
               >
                 <ImageIcon className="w-4 h-4 text-emerald-600" />
-                Attach Assessment Photo
+                {isPatientSession ? 'Attach Meal Plate Photo' : 'Attach Assessment Photo'}
               </button>
-              <button
-                type="button"
-                onClick={() => handleSendMedia('pdf')}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-teal-50 hover:text-teal-900 transition-colors"
-              >
-                <FileText className="w-4 h-4 text-rose-600" />
-                Attach Meal Plan PDF
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSendMedia('exercise_plan')}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-teal-50 hover:text-teal-900 transition-colors"
-              >
-                <Dumbbell className="w-4 h-4 text-teal-600" />
-                Attach Exercise Routine
-              </button>
+              
+              {!isPatientSession && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleSendMedia('pdf')}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-teal-50 hover:text-teal-900 transition-colors cursor-pointer"
+                  >
+                    <FileText className="w-4 h-4 text-rose-600" />
+                    Attach Meal Plan PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSendMedia('exercise_plan')}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-teal-50 hover:text-teal-900 transition-colors cursor-pointer"
+                  >
+                    <Dumbbell className="w-4 h-4 text-teal-600" />
+                    Attach Exercise Routine
+                  </button>
+                </>
+              )}
             </div>
           )}
 
@@ -559,18 +723,18 @@ export const PatientChatView: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsAttachOpen(!isAttachOpen)}
-              className="p-2 text-slate-500 hover:text-teal-600 hover:bg-slate-100 rounded-xl transition-colors"
-              title="Attach media or PDFs"
+              className="p-2 text-slate-500 hover:text-teal-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              title="Attach meal photo or documents"
             >
               <Paperclip className="w-5 h-5" />
             </button>
 
-            {/* AI Generator Button */}
-            {senderRole === 'doctor' && (
+            {/* AI Generator Button (Doctor Only) */}
+            {!isPatientSession && senderRole === 'doctor' && (
               <button
                 type="button"
                 onClick={() => setIsCopilotPromptOpen(!isCopilotPromptOpen)}
-                className="p-2 text-teal-600 bg-teal-50 hover:bg-teal-100 rounded-xl transition-colors"
+                className="p-2 text-teal-600 bg-teal-50 hover:bg-teal-100 rounded-xl transition-colors cursor-pointer"
                 title="Generate AI Clinical Motivation"
               >
                 <Sparkles className="w-5 h-5" />
@@ -581,14 +745,18 @@ export const PatientChatView: React.FC = () => {
             <input
               type="text"
               placeholder={
-                senderRole === 'doctor'
+                isPatientSession
+                  ? "Type a message or question to your dietitian (e.g. fruit after dinner, cravings, snacks)..."
+                  : senderRole === 'doctor'
                   ? `Message ${currentPatient?.name || 'patient'} as Dr. Ashmita...`
                   : `Type reply as ${currentPatient?.name || 'patient'}...`
               }
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               className={`flex-1 text-xs sm:text-sm px-4 py-2.5 rounded-xl border focus:outline-none focus:ring-2 bg-slate-50 focus:bg-white transition-all ${
-                senderRole === 'doctor'
+                isPatientSession
+                  ? 'border-emerald-300 focus:ring-emerald-500'
+                  : senderRole === 'doctor'
                   ? 'border-slate-200 focus:ring-teal-500'
                   : 'border-emerald-300 focus:ring-emerald-500'
               }`}
@@ -600,9 +768,7 @@ export const PatientChatView: React.FC = () => {
               disabled={!inputText.trim()}
               className={`p-2.5 rounded-xl text-white font-bold transition-all cursor-pointer ${
                 inputText.trim() 
-                  ? senderRole === 'doctor'
-                    ? 'bg-teal-600 hover:bg-teal-700 shadow-md transform active:scale-95'
-                    : 'bg-emerald-600 hover:bg-emerald-700 shadow-md transform active:scale-95'
+                  ? 'bg-teal-600 hover:bg-teal-700 shadow-md transform active:scale-95'
                   : 'bg-slate-300 cursor-not-allowed'
               }`}
             >
