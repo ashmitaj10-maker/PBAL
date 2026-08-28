@@ -1212,7 +1212,7 @@ export const AiCopilotView: React.FC = () => {
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Generate tailored motivational messages and publish them to the patient's portal or WhatsApp chat.
+                    Generate tailored motivational messages and publish them to the patient's portal or Chat.
                   </p>
                 </div>
 
@@ -1337,7 +1337,7 @@ export const AiCopilotView: React.FC = () => {
                       {sentToChatKey === 'published-mot' ? 'Published to Patient Portal!' : 'Publish to Patient Portal'}
                     </button>
 
-                    {/* Send into Patient WhatsApp Chat */}
+                    {/* Send into Chat */}
                     <button
                       onClick={() => handleSendToChat(generatedMotivation, 'gen-mot-chat')}
                       className="px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer"

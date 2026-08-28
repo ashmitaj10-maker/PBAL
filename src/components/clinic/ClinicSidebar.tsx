@@ -118,7 +118,7 @@ export const ClinicSidebar: React.FC<ClinicSidebarProps> = ({
         { id: 'progress_photos', label: 'Transformation Photos', icon: Camera },
         { 
           id: 'patient_chat', 
-          label: 'Patient WhatsApp Chat', 
+          label: 'Chat', 
           icon: MessageSquare, 
           badge: kpis.unreadChatCount > 0 ? kpis.unreadChatCount : undefined,
           badgeColor: 'bg-rose-500 text-white'

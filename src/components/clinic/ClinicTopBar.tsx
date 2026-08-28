@@ -85,7 +85,7 @@ export const ClinicTopBar: React.FC<ClinicTopBarProps> = ({
       case 'progress_photos':
         return 'Transformation Photos Studio';
       case 'patient_chat':
-        return 'Patient Engagement & WhatsApp Chat';
+        return 'Chat';
       case 'reminder_settings':
         return 'Automated Clinical Reminders';
       case 'ai_copilot':
