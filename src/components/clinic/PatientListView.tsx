@@ -25,7 +25,9 @@ import {
   Edit,
   MessageSquare,
   Bot,
-  KeyRound
+  KeyRound,
+  Pause,
+  Play
 } from 'lucide-react';
 import { IssuePatientCodeModal } from './IssuePatientCodeModal';
 
@@ -37,7 +39,9 @@ export const PatientListView: React.FC = () => {
     setIsPaymentModalOpen, 
     setIsWeightModalOpen,
     setSelectedPatientId,
-    deletePatient
+    deletePatient,
+    pausePatientPlan,
+    resumePatientPlan
   } = useClinic();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -201,6 +205,7 @@ export const PatientListView: React.FC = () => {
             >
               <option value="all">All Statuses</option>
               <option value="active">Active Plan</option>
+              <option value="paused">Paused Plan</option>
               <option value="pending_renewal">Renewal Due</option>
               <option value="completed">Completed</option>
               <option value="inactive">Inactive</option>
@@ -376,6 +381,11 @@ export const PatientListView: React.FC = () => {
                               <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" /> Active
                             </span>
                           )}
+                          {patient.status === 'paused' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                              <Pause className="w-2.5 h-2.5 text-amber-700" /> Paused
+                            </span>
+                          )}
                           {patient.status === 'pending_renewal' && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
                               <Clock className="w-2.5 h-2.5 text-amber-600" /> Renewal Due
@@ -397,6 +407,24 @@ export const PatientListView: React.FC = () => {
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
+                          {patient.status === 'paused' ? (
+                            <button
+                              onClick={() => resumePatientPlan(patient.id)}
+                              className="p-1.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                              title="Resume Patient Plan"
+                            >
+                              <Play className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => pausePatientPlan(patient.id, 'Doctor initiated pause')}
+                              className="p-1.5 text-slate-400 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                              title="Pause Patient Plan"
+                            >
+                              <Pause className="w-4 h-4" />
+                            </button>
+                          )}
+
                           <button
                             onClick={() => navigateTo('patient_chat', { patientId: patient.id })}
                             className="p-1.5 text-slate-500 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors cursor-pointer"

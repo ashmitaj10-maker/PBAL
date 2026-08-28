@@ -144,8 +144,12 @@ export const PatientAppLayout: React.FC = () => {
               </div>
             </div>
 
-            <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-md shrink-0">
-              Active
+            <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md shrink-0 uppercase tracking-wider ${
+              patient?.status === 'paused'
+                ? 'bg-amber-100 text-amber-950 border border-amber-300'
+                : 'bg-emerald-100 text-emerald-900'
+            }`}>
+              {patient?.status === 'paused' ? '⏸️ Paused' : 'Active'}
             </span>
           </div>
         </div>

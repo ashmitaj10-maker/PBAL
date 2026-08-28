@@ -27,7 +27,8 @@ import {
   User,
   MessageSquare,
   Stethoscope,
-  Lock
+  Lock,
+  Pause
 } from 'lucide-react';
 import { calculateBmi } from '../../utils/nutritionCalculators';
 import { 
@@ -316,6 +317,52 @@ export const PatientMobileHomeView: React.FC = () => {
                 <ChevronRight className="w-4 h-4" />
               </div>
             </div>
+
+            {/* PLAN PAUSED PATIENT NOTIFICATION BANNER */}
+            {patient.status === 'paused' && (
+              <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 p-5 rounded-2xl border border-amber-300 shadow-xs space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-bold shadow-xs shrink-0 mt-0.5">
+                    <Pause className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-extrabold text-amber-950">Plan Paused</h3>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-200 text-amber-950 border border-amber-300">
+                          Paused on {formatDate(patient.pauseDetails?.pausedAt || patient.renewalDate)}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-amber-900 mt-1 font-medium leading-relaxed">
+                      Your clinical diet plan is currently paused in coordination with <strong>{assignedDietician?.name || 'Dr. Ashmita Joshi'}</strong>.
+                      {patient.pauseDetails?.pauseReason && (
+                        <span className="block text-[11px] text-amber-800 mt-0.5 font-normal">
+                          <strong>Note:</strong> "{patient.pauseDetails.pauseReason}"
+                        </span>
+                      )}
+                    </p>
+                    <div className="mt-2 text-[11px] text-amber-800 bg-white/70 p-2.5 rounded-xl border border-amber-200/80 space-y-1">
+                      <div>✓ <strong>Full Historical Access:</strong> You can continue to view all your previous meals, recipes, water logs, and weight graphs.</div>
+                      <div>⏸️ <strong>On Hold:</strong> Future meal releases, recurring payment billings, and automated notifications are paused until your dietitian resumes your program.</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-amber-200/60 flex items-center justify-between">
+                  <span className="text-[10px] text-amber-800 font-semibold">
+                    Need to discuss or resume your program?
+                  </span>
+                  <button
+                    onClick={() => navigateTo('patient_chat', { patientId: patient.id })}
+                    className="px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>Chat with Dietitian</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* =========================================================================
                 DAY NAVIGATION BAR: ← PREVIOUS DAY | THURSDAY, 28-08-2026 | NEXT DAY →

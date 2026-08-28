@@ -9,7 +9,7 @@ export type FoodPreference =
   | 'Keto'
   | 'Pescatarian';
 
-export type PatientStatus = 'active' | 'pending_renewal' | 'completed' | 'inactive';
+export type PatientStatus = 'active' | 'paused' | 'pending_renewal' | 'completed' | 'inactive';
 
 export type PaymentStatus = 'paid' | 'partial' | 'pending' | 'overdue';
 
@@ -110,6 +110,13 @@ export interface Patient {
     date: string;
     tone?: string;
   };
+  pauseDetails?: {
+    isPaused: boolean;
+    pausedAt?: string; // YYYY-MM-DD
+    pausedBy?: string;
+    pauseReason?: string;
+    resumedAt?: string; // YYYY-MM-DD
+  };
 }
 
 export interface PaymentRecord {
@@ -132,6 +139,10 @@ export interface PaymentRecord {
   paymentMode: PaymentMode;
   transactionRef?: string;
   status: PaymentStatus;
+  subscriptionStatus?: 'active' | 'paused' | 'cancelled' | 'completed';
+  isPaused?: boolean;
+  pausedAt?: string;
+  pauseReason?: string;
   paymentDate: string; // YYYY-MM-DD
   dueDate: string; // YYYY-MM-DD
   notes?: string;
@@ -347,6 +358,9 @@ export interface ClinicalMealPlan {
   createdBy: string;
   createdAt: string;
   publishedAt?: string;
+  isPaused?: boolean;
+  pausedAt?: string;
+  pauseReason?: string;
   changeLog?: string[];
 }
 

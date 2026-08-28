@@ -19,26 +19,40 @@ import {
   Layers,
   ArrowUpRight,
   TrendingUp,
-  Edit3
+  Edit3,
+  Pause,
+  Play,
+  X,
+  AlertCircle,
+  User,
+  ShieldAlert
 } from 'lucide-react';
 
 export const PaymentManagementView: React.FC = () => {
   const { 
     payments, 
     plans, 
+    patients,
     currentClinic, 
     navigateTo, 
     setIsPaymentModalOpen, 
     setIsCreatePlanModalOpen,
     openPlanModal,
     setSelectedInvoiceId,
-    getDashboardKpis
+    getDashboardKpis,
+    pausePatientPlan,
+    resumePatientPlan
   } = useClinic();
 
-  const [activeTab, setActiveTab] = useState<'transactions' | 'plans'>('transactions');
+  const [activeTab, setActiveTab] = useState<'transactions' | 'subscriptions' | 'plans'>('transactions');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [modeFilter, setModeFilter] = useState<string>('all');
+  const [subscriptionFilter, setSubscriptionFilter] = useState<string>('all');
+
+  const [isPauseModalOpen, setIsPauseModalOpen] = useState(false);
+  const [selectedPatientForPause, setSelectedPatientForPause] = useState<any>(null);
+  const [pauseReasonInput, setPauseReasonInput] = useState('');
 
   const kpis = getDashboardKpis();
 
@@ -184,6 +198,20 @@ export const PaymentManagementView: React.FC = () => {
           }`}
         >
           Payment Transactions ({payments.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('subscriptions')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            activeTab === 'subscriptions' ? 'bg-[#183153] text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>Patient Subscriptions & Plan Status</span>
+          {(patients || []).filter(p => p.status === 'paused').length > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-200 text-amber-950">
+              {(patients || []).filter(p => p.status === 'paused').length} Paused
+            </span>
+          )}
         </button>
         <button
           onClick={() => setActiveTab('plans')}
@@ -345,7 +373,201 @@ export const PaymentManagementView: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 2: CLINICAL PLANS CATALOGUE */}
+      {/* TAB 2: PATIENT SUBSCRIPTIONS & PLAN PAUSE/RESUME */}
+      {activeTab === 'subscriptions' && (
+        <div className="space-y-4">
+          
+          {/* Subscriptions Overview Banner */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="medical-card p-4 bg-white border border-slate-200">
+              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Enrolled Patients</div>
+              <div className="text-xl font-black text-[#183153] mt-1">
+                {(patients || []).filter(p => p.assignedPlanName || p.assignedPlanId).length}
+              </div>
+              <div className="text-[11px] text-slate-400 mt-0.5">Purchased clinical nutrition plans</div>
+            </div>
+
+            <div className="medical-card p-4 bg-emerald-50/60 border border-emerald-200">
+              <div className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">Active Subscriptions</div>
+              <div className="text-xl font-black text-emerald-900 mt-1">
+                {(patients || []).filter(p => p.status === 'active' && (p.assignedPlanName || p.assignedPlanId)).length}
+              </div>
+              <div className="text-[11px] text-emerald-700 mt-0.5">Billing & automated reminders active</div>
+            </div>
+
+            <div className="medical-card p-4 bg-amber-50/70 border border-amber-200">
+              <div className="text-[11px] font-bold text-amber-900 uppercase tracking-wider">Paused Subscriptions</div>
+              <div className="text-xl font-black text-amber-950 mt-1">
+                {(patients || []).filter(p => p.status === 'paused').length}
+              </div>
+              <div className="text-[11px] text-amber-800 mt-0.5">Billing & future notifications on hold</div>
+            </div>
+          </div>
+
+          {/* Filters Bar */}
+          <div className="medical-card p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+              <div className="sm:col-span-8 relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search patient by name, code, mobile, or plan..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-[#183153] focus:ring-2 focus:ring-[#6BBF59]/30 focus:border-[#6BBF59] outline-none"
+                />
+              </div>
+
+              <div className="sm:col-span-4">
+                <select
+                  value={subscriptionFilter}
+                  onChange={(e) => setSubscriptionFilter(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-[#183153] font-medium focus:ring-2 focus:ring-[#6BBF59]/30 focus:border-[#6BBF59] outline-none"
+                >
+                  <option value="all">All Subscription States</option>
+                  <option value="active">Active Only</option>
+                  <option value="paused">Paused Only</option>
+                  <option value="pending_renewal">Renewal Due Only</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Subscriptions Table */}
+          <div className="medical-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200 uppercase text-[10px] tracking-wider">
+                    <th className="py-3 px-4">Patient Profile</th>
+                    <th className="py-3 px-4">Assigned Plan</th>
+                    <th className="py-3 px-4">Start & Renewal Period</th>
+                    <th className="py-3 px-4 text-center">Subscription Status</th>
+                    <th className="py-3 px-4 text-right">Doctor Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {(() => {
+                    const q = (searchQuery || '').toLowerCase().trim();
+                    const list = (patients || []).filter(p => {
+                      const hasPlan = !!p.assignedPlanName || !!p.assignedPlanId;
+                      const matchesSearch = !q ||
+                        (p.name || '').toLowerCase().includes(q) ||
+                        (p.patientCode || '').toLowerCase().includes(q) ||
+                        (p.assignedPlanName || '').toLowerCase().includes(q) ||
+                        (p.mobile || '').includes(q);
+
+                      const matchesSub = subscriptionFilter === 'all' || p.status === subscriptionFilter;
+                      return hasPlan && matchesSearch && matchesSub;
+                    });
+
+                    if (list.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={5} className="py-10 text-center text-slate-400">
+                            No patient subscriptions found matching the selected filter.
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    return list.map(pat => {
+                      const isPaused = pat.status === 'paused';
+                      return (
+                        <tr key={pat.id} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-[#183153] text-white font-bold flex items-center justify-center text-xs shrink-0">
+                                {pat.name.charAt(0)}
+                              </div>
+                              <div>
+                                <div className="font-bold text-[#183153]">{pat.name}</div>
+                                <div className="text-[10px] text-slate-400 font-mono">{pat.patientCode} • {pat.mobile}</div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            <div className="font-semibold text-slate-900">{pat.assignedPlanName || 'Clinical Care Plan'}</div>
+                            <div className="text-[10px] text-slate-500">{pat.foodPreference} Diet</div>
+                          </td>
+
+                          <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600">
+                            <div>Joined: {formatDate(pat.joiningDate)}</div>
+                            <div className="text-slate-400">Renewal: {pat.renewalDate ? formatDate(pat.renewalDate) : 'Ongoing'}</div>
+                          </td>
+
+                          <td className="py-3.5 px-4 text-center">
+                            {isPaused ? (
+                              <div className="inline-block text-left">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-950 border border-amber-300">
+                                  <Pause className="w-2.5 h-2.5 text-amber-700" /> Plan Paused
+                                </span>
+                                {pat.pauseDetails?.pausedAt && (
+                                  <div className="text-[9px] text-amber-800 mt-0.5 font-mono">
+                                    Since {formatDate(pat.pauseDetails.pausedAt)}
+                                  </div>
+                                )}
+                                {pat.pauseDetails?.pauseReason && (
+                                  <div className="text-[9px] text-slate-500 truncate max-w-[150px]" title={pat.pauseDetails.pauseReason}>
+                                    "{pat.pauseDetails.pauseReason}"
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" /> Active Plan
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {isPaused ? (
+                                <button
+                                  onClick={() => resumePatientPlan(pat.id)}
+                                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow-2xs cursor-pointer"
+                                  title="Resume patient subscription, billing and automated reminders"
+                                >
+                                  <Play className="w-3.5 h-3.5" />
+                                  <span>Resume Plan</span>
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setSelectedPatientForPause(pat);
+                                    setIsPauseModalOpen(true);
+                                  }}
+                                  className="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-bold text-[11px] transition-all flex items-center gap-1 cursor-pointer"
+                                  title="Pause patient subscription and pause future billings"
+                                >
+                                  <Pause className="w-3.5 h-3.5 text-amber-700" />
+                                  <span>Pause Plan</span>
+                                </button>
+                              )}
+
+                              <button
+                                onClick={() => navigateTo('patient_profile', { patientId: pat.id })}
+                                className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-[#183153] hover:text-white text-[#183153] font-semibold text-[11px] transition-colors cursor-pointer"
+                                title="View Patient Profile"
+                              >
+                                View Profile
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* TAB 3: CLINICAL PLANS CATALOGUE */}
       {activeTab === 'plans' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -418,6 +640,108 @@ export const PaymentManagementView: React.FC = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* PAUSE PLAN MODAL (DOCTOR / DIETITIAN ONLY) */}
+      {isPauseModalOpen && selectedPatientForPause && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
+                  <Pause className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Pause Patient Plan</h3>
+                  <p className="text-xs text-slate-500">{selectedPatientForPause.name} ({selectedPatientForPause.patientCode})</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setIsPauseModalOpen(false);
+                  setSelectedPatientForPause(null);
+                  setPauseReasonInput('');
+                }}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3.5 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-900 space-y-1.5">
+              <div className="font-bold flex items-center gap-1.5 text-amber-950">
+                <AlertCircle className="w-4 h-4 text-amber-700" />
+                <span>What happens when paused:</span>
+              </div>
+              <ul className="list-disc list-inside text-[11px] text-amber-800 space-y-0.5 ml-1">
+                <li>Plan status changes to <strong>Paused</strong> immediately.</li>
+                <li>Future scheduled payment dues & subscription billings are put on hold.</li>
+                <li>Automated meal/exercise reminders and preparation notices stop.</li>
+                <li>Patient retains full access to their past meals, logs, and assessments.</li>
+                <li>Only you (the doctor/dietitian) can resume the plan when the patient returns.</li>
+              </ul>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-slate-700">
+                Reason for Pause (Optional note for medical records):
+              </label>
+
+              {/* Quick Reason Chips */}
+              <div className="flex flex-wrap gap-1.5">
+                {['Travel / Out of Station', 'Medical Recovery / Surgery', 'Family Emergency', 'Work / Exam Schedule', 'Temporary Health Break'].map(r => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setPauseReasonInput(r)}
+                    className={`px-2 py-1 text-[11px] rounded-lg border transition-colors cursor-pointer ${
+                      pauseReasonInput === r
+                        ? 'bg-amber-100 text-amber-900 border-amber-300 font-bold'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                value={pauseReasonInput}
+                onChange={(e) => setPauseReasonInput(e.target.value)}
+                placeholder="Enter specific clinical reason or patient request details..."
+                rows={3}
+                className="w-full p-3 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+              />
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPauseModalOpen(false);
+                  setSelectedPatientForPause(null);
+                  setPauseReasonInput('');
+                }}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  pausePatientPlan(selectedPatientForPause.id, pauseReasonInput || 'Doctor initiated pause');
+                  setIsPauseModalOpen(false);
+                  setSelectedPatientForPause(null);
+                  setPauseReasonInput('');
+                }}
+                className="px-4 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <Pause className="w-3.5 h-3.5" />
+                <span>Confirm & Pause Plan</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

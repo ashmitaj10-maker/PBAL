@@ -329,6 +329,10 @@ interface ClinicContextType {
   markAllDietitianNotificationsAsRead: () => void;
   getDietPlanReminderForPatient: (patientId: string) => DietitianNotification | null;
 
+  // Plan Pause & Resume Functionality
+  pausePatientPlan: (patientId: string, reason?: string) => void;
+  resumePatientPlan: (patientId: string) => void;
+
   // KPIs calculation helpers
   getDashboardKpis: () => {
     activePatients: number;
@@ -1211,6 +1215,141 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     if (selectedPatientId === id) {
       setSelectedPatientId(allPatients.find(p => p.id !== id)?.id || null);
     }
+  };
+
+  // Plan Pause & Resume Functionality (Doctor / Dietitian Authority Only)
+  const pausePatientPlan = (patientId: string, reason?: string) => {
+    if (isPatientSession) {
+      console.warn('RBAC Violation: Patients are not authorized to pause plans directly.');
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const doctorName = currentUser?.name || 'Dr. Ashmita Joshi';
+    const pauseNote = reason?.trim() || 'Paused by Dietitian';
+
+    // 1. Update Patient status and pause details
+    setAllPatients(prev => prev.map(p => {
+      if (p.id === patientId) {
+        return {
+          ...p,
+          status: 'paused',
+          pauseDetails: {
+            isPaused: true,
+            pausedAt: today,
+            pausedBy: doctorName,
+            pauseReason: pauseNote
+          }
+        };
+      }
+      return p;
+    }));
+
+    // 2. Pause active meal plans for this patient
+    setAllClinicalMealPlans(prev => prev.map(mp => {
+      if (mp.patientId === patientId) {
+        return {
+          ...mp,
+          isPaused: true,
+          pausedAt: today,
+          pauseReason: pauseNote
+        };
+      }
+      return mp;
+    }));
+
+    // 3. Pause active payment subscriptions for this patient
+    setAllPayments(prev => prev.map(pay => {
+      if (pay.patientId === patientId) {
+        return {
+          ...pay,
+          subscriptionStatus: 'paused',
+          isPaused: true,
+          pausedAt: today,
+          pauseReason: pauseNote
+        };
+      }
+      return pay;
+    }));
+
+    // 4. Log Clinical Activity
+    const targetPat = allPatients.find(p => p.id === patientId);
+    const act: ClinicActivity = {
+      id: `act-${Date.now()}`,
+      clinicId: currentClinic.id,
+      type: 'plan_renewed',
+      title: 'Plan Paused by Doctor',
+      description: `Plan for ${targetPat?.name || 'Patient'} was paused by ${doctorName}. Note: "${pauseNote}". Recurring billings and automated reminders put on hold.`,
+      timestamp: 'Just now',
+      patientId,
+      patientName: targetPat?.name,
+      user: doctorName
+    };
+    setAllActivities(prev => [act, ...prev]);
+  };
+
+  const resumePatientPlan = (patientId: string) => {
+    if (isPatientSession) {
+      console.warn('RBAC Violation: Patients are not authorized to resume plans directly.');
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const doctorName = currentUser?.name || 'Dr. Ashmita Joshi';
+
+    // 1. Update Patient status to active
+    setAllPatients(prev => prev.map(p => {
+      if (p.id === patientId) {
+        return {
+          ...p,
+          status: 'active',
+          pauseDetails: {
+            ...(p.pauseDetails || { isPaused: false }),
+            isPaused: false,
+            resumedAt: today
+          }
+        };
+      }
+      return p;
+    }));
+
+    // 2. Resume active meal plans
+    setAllClinicalMealPlans(prev => prev.map(mp => {
+      if (mp.patientId === patientId) {
+        return {
+          ...mp,
+          isPaused: false
+        };
+      }
+      return mp;
+    }));
+
+    // 3. Resume subscriptions / payments
+    setAllPayments(prev => prev.map(pay => {
+      if (pay.patientId === patientId) {
+        return {
+          ...pay,
+          subscriptionStatus: 'active',
+          isPaused: false
+        };
+      }
+      return pay;
+    }));
+
+    // 4. Log Clinical Activity
+    const targetPat = allPatients.find(p => p.id === patientId);
+    const act: ClinicActivity = {
+      id: `act-${Date.now()}`,
+      clinicId: currentClinic.id,
+      type: 'plan_renewed',
+      title: 'Plan Resumed by Doctor',
+      description: `Plan for ${targetPat?.name || 'Patient'} has been resumed by ${doctorName}. Billing and notifications are active.`,
+      timestamp: 'Just now',
+      patientId,
+      patientName: targetPat?.name,
+      user: doctorName
+    };
+    setAllActivities(prev => [act, ...prev]);
   };
 
   // Weight History Actions
@@ -2174,6 +2313,9 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       const pat = allPatients.find(p => p.id === plan.patientId);
       if (!pat) return;
 
+      // If patient or plan is paused, suppress active preparation reminders
+      if (pat.status === 'paused' || plan.isPaused) return;
+
       const diffDays = getDaysDifference(today, plan.startDate);
       const duration = plan.durationDays || 7;
       const formattedStartDate = formatDate(plan.startDate);
@@ -2498,6 +2640,9 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         markDietitianNotificationAsRead,
         markAllDietitianNotificationsAsRead,
         getDietPlanReminderForPatient,
+        // Plan Pause & Resume Functionality
+        pausePatientPlan,
+        resumePatientPlan,
         getDashboardKpis
       }}
     >
