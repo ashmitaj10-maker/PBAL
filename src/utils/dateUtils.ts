@@ -182,3 +182,48 @@ export function isToday(targetDateInput: string | Date): boolean {
   return getDaysDifference(new Date(), targetDateInput) === 0;
 }
 
+/**
+ * Formats a date with day of the week and DD-MM-YYYY format.
+ * Example: 'Thursday, 28-08-2026'
+ */
+export function formatDayOfWeekAndDate(dateInput?: string | number | Date | null): string {
+  if (!dateInput) return '—';
+  
+  const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  let dateObj: Date;
+
+  if (typeof dateInput === 'string') {
+    if (/^\d{2}-\d{2}-\d{4}$/.test(dateInput.trim())) {
+      const [d, m, y] = dateInput.trim().split('-');
+      dateObj = new Date(Number(y), Number(m) - 1, Number(d));
+    } else {
+      dateObj = new Date(dateInput);
+    }
+  } else {
+    dateObj = new Date(dateInput);
+  }
+
+  if (isNaN(dateObj.getTime())) return '—';
+
+  const dayName = DAYS[dateObj.getDay()];
+  const formattedDate = formatDate(dateObj);
+  return `${dayName}, ${formattedDate}`;
+}
+
+/**
+ * Returns date formatted as YYYY-MM-DD
+ */
+export function formatDateIso(dateInput: string | Date): string {
+  const d = typeof dateInput === 'string' 
+    ? (/^\d{2}-\d{2}-\d{4}$/.test(dateInput.trim()) 
+        ? (() => { const [day, month, year] = dateInput.trim().split('-'); return new Date(Number(year), Number(month) - 1, Number(day)); })() 
+        : new Date(dateInput))
+    : dateInput;
+  
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${year}-${month}-${day}`;
+}
+
+

@@ -256,8 +256,8 @@ interface ClinicContextType {
   closeRecipeModal: () => void;
 
   // Phase 2: Patient Mobile App Tracking
-  updatePatientDailyLog: (patientId: string, updates: Partial<PatientDailyLog>) => void;
-  getPatientDailyLog: (patientId: string) => PatientDailyLog;
+  updatePatientDailyLog: (patientId: string, updates: Partial<PatientDailyLog>, dateStr?: string) => void;
+  getPatientDailyLog: (patientId: string, dateStr?: string) => PatientDailyLog;
 
   // Phase 3: Body Circumference Measurements
   bodyMeasurements: BodyMeasurementsRecord[];
@@ -1793,34 +1793,82 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setSelectedRecipe(null);
   };
 
-  // Phase 2: Patient Daily Logs
-  const updatePatientDailyLog = (patientId: string, updates: Partial<PatientDailyLog>) => {
+  // Phase 2: Patient Daily Logs (Date-Aware)
+  const updatePatientDailyLog = (patientId: string, updates: Partial<PatientDailyLog>, dateStr?: string) => {
+    const today = new Date().toISOString().split('T')[0];
+    const targetDate = dateStr || updates.date || today;
+    const storageKey = `${patientId}_${targetDate}`;
+
     setAllPatientLogs(prev => {
-      const existing = prev[patientId] || {
-        date: new Date().toISOString().split('T')[0],
+      const existing = prev[storageKey] || (targetDate === today ? prev[patientId] : undefined) || {
+        date: targetDate,
         waterGlassesDrank: 4,
         waterGoalGlasses: 8,
         mealsStatus: {},
         exercisesCompleted: []
       };
+
+      const updatedLog: PatientDailyLog = {
+        ...existing,
+        ...updates,
+        date: targetDate,
+        mealsStatus: {
+          ...existing.mealsStatus,
+          ...(updates.mealsStatus || {})
+        }
+      };
+
       return {
         ...prev,
-        [patientId]: {
-          ...existing,
-          ...updates,
-          mealsStatus: {
-            ...existing.mealsStatus,
-            ...(updates.mealsStatus || {})
-          }
-        }
+        [storageKey]: updatedLog,
+        ...(targetDate === today ? { [patientId]: updatedLog } : {})
       };
     });
   };
 
-  const getPatientDailyLog = (patientId: string): PatientDailyLog => {
-    return allPatientLogs[patientId] || {
-      date: new Date().toISOString().split('T')[0],
-      waterGlassesDrank: 4,
+  const getPatientDailyLog = (patientId: string, dateStr?: string): PatientDailyLog => {
+    const today = new Date().toISOString().split('T')[0];
+    const targetDate = dateStr || today;
+    const storageKey = `${patientId}_${targetDate}`;
+
+    if (allPatientLogs[storageKey]) {
+      return allPatientLogs[storageKey];
+    }
+
+    if (targetDate === today && allPatientLogs[patientId]) {
+      return allPatientLogs[patientId];
+    }
+
+    const daysDiff = getDaysDifference(today, targetDate);
+    if (daysDiff < 0) {
+      // Past day: mock a typical logged history
+      return {
+        date: targetDate,
+        waterGlassesDrank: 7,
+        waterGoalGlasses: 8,
+        mealsStatus: {
+          'wake_up': 'eaten',
+          'breakfast': 'eaten',
+          'lunch': 'eaten',
+          'snack': 'eaten',
+          'dinner': 'eaten',
+          'sleep': 'eaten',
+          'rec-chia-lemon': 'eaten',
+          'rec-oats-greek': 'eaten',
+          'rec-tender-coconut': 'eaten',
+          'rec-quinoa-paneer-bowl': 'eaten',
+          'rec-roasted-makhana': 'eaten',
+          'rec-moong-khichdi': 'eaten',
+          'rec-golden-turmeric': 'eaten'
+        },
+        exercisesCompleted: ['ex-1', 'ex-2']
+      };
+    }
+
+    // Future day or clean day
+    return {
+      date: targetDate,
+      waterGlassesDrank: 0,
       waterGoalGlasses: 8,
       mealsStatus: {},
       exercisesCompleted: []
