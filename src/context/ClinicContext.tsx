@@ -702,11 +702,29 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const currentClinic = clinics.find(c => c.id === selectedClinicId) || clinics[0];
 
+  // RBAC DATA SANITIZATION:
+  // Strip doctor-only internal clinical notes and voice memos for patient sessions at the data/context level.
+  const sanitizePatientForPatientRole = (p: Patient): Patient => {
+    return {
+      ...p,
+      notes: undefined,
+      consultationNotes: undefined,
+      voiceAudioUrl: undefined,
+      voiceAudioDuration: undefined,
+      voiceAudioDate: undefined,
+      voiceTranscript: undefined
+    };
+  };
+
   // RBAC SCOPED COLLECTIONS:
-  // Patients are strictly locked to their own single record in patient session mode.
-  const patients = isPatientSession
+  // Patients are strictly locked to their own single record in patient session mode, with doctor-only fields stripped.
+  const rawPatients = isPatientSession
     ? (loggedInPatient ? [loggedInPatient] : (allPatients.filter(p => p.id === selectedPatientId)))
     : allPatients.filter(p => p.clinicId === currentClinic.id);
+
+  const patients = isPatientSession
+    ? rawPatients.map(sanitizePatientForPatientRole)
+    : rawPatients;
 
   const weightRecords = allWeightRecords;
   const plans = allPlans.filter(p => p.clinicId === currentClinic.id || p.clinicId === 'clinic-1');
@@ -723,10 +741,14 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const clinicalMealPlans = allClinicalMealPlans.filter(p => p.clinicId === currentClinic.id);
   const exercisePlans = allExercisePlans.filter(p => p.clinicId === currentClinic.id);
 
-  // RBAC: Patient cannot switch to any other patient ID
-  const selectedPatient = isPatientSession
-    ? (loggedInPatient || allPatients.find(p => p.id === selectedPatientId) || patients[0] || null)
-    : (allPatients.find(p => p.id === selectedPatientId) || patients[0] || null);
+  // RBAC: Patient cannot switch to any other patient ID and only receives permitted data
+  const rawSelectedPatient = isPatientSession
+    ? (loggedInPatient || allPatients.find(p => p.id === selectedPatientId) || rawPatients[0] || null)
+    : (allPatients.find(p => p.id === selectedPatientId) || rawPatients[0] || null);
+
+  const selectedPatient = isPatientSession && rawSelectedPatient
+    ? sanitizePatientForPatientRole(rawSelectedPatient)
+    : rawSelectedPatient;
 
   const selectedInvoice = allInvoices.find(i => i.id === selectedInvoiceId) || null;
 
@@ -1434,11 +1456,19 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   const deleteWeightRecord = (id: string) => {
+    if (isPatientSession) {
+      console.warn('RBAC Violation: Patients cannot delete clinical records.');
+      return;
+    }
     setAllWeightRecords(prev => prev.filter(w => w.id !== id));
   };
 
   // Plan Actions
   const createPlan = (input: Omit<ClinicPlan, 'id' | 'clinicId'>): ClinicPlan => {
+    if (isPatientSession) {
+      console.warn('RBAC Violation: Patients cannot create plans.');
+      throw new Error('Unauthorized');
+    }
     const newPlan: ClinicPlan = {
       ...input,
       id: `plan-${Date.now()}`,
@@ -1476,6 +1506,10 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   // Payments and Invoices
   const recordPayment = (input: RecordPaymentInput): { payment: PaymentRecord; invoice: Invoice } => {
+    if (isPatientSession) {
+      console.warn('RBAC Violation: Patient accounts are not authorized to record clinic payments.');
+      throw new Error('Unauthorized operation: patient cannot record payments.');
+    }
     const patient = allPatients.find(p => p.id === input.patientId);
     const plan = allPlans.find(p => p.id === input.planId);
 
@@ -1590,6 +1624,10 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   const markInvoicePaid = (invoiceId: string, paymentMode: PaymentMode = 'upi', transactionRef?: string) => {
+    if (isPatientSession) {
+      console.warn('RBAC Violation: Patient accounts cannot mark invoices paid.');
+      return;
+    }
     const inv = allInvoices.find(i => i.id === invoiceId);
     if (!inv) return;
 
@@ -1641,6 +1679,10 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   // Phase 2: Assessment Methods
   const saveAssessment = (assessment: PatientAssessment) => {
+    if (isPatientSession) {
+      console.warn('RBAC Violation: Patients cannot create or modify assessments.');
+      return;
+    }
     setAllAssessments(prev => {
       const exists = prev.some(a => a.id === assessment.id);
       if (exists) {
@@ -1677,6 +1719,10 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   // Phase 2: AI Clinical Meal Plan Methods
   const saveMealPlan = (plan: ClinicalMealPlan) => {
+    if (isPatientSession) {
+      console.warn('RBAC Violation: Patients cannot modify clinical meal plans.');
+      return;
+    }
     setAllClinicalMealPlans(prev => {
       const exists = prev.some(p => p.id === plan.id);
       if (exists) {
@@ -1688,6 +1734,10 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   const publishMealPlan = (planId: string) => {
+    if (isPatientSession) {
+      console.warn('RBAC Violation: Patients cannot publish meal plans.');
+      return;
+    }
     setAllClinicalMealPlans(prev => prev.map(p => {
       if (p.id === planId) {
         return {
@@ -1731,6 +1781,10 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   // Phase 2: Exercise Plan Methods
   const saveExercisePlan = (plan: ExercisePlan) => {
+    if (isPatientSession) {
+      console.warn('RBAC Violation: Patients cannot modify exercise plans.');
+      return;
+    }
     setAllExercisePlans(prev => {
       const exists = prev.some(p => p.id === plan.id);
       if (exists) {
@@ -1741,6 +1795,10 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   const publishExercisePlan = (planId: string) => {
+    if (isPatientSession) {
+      console.warn('RBAC Violation: Patients cannot publish exercise plans.');
+      return;
+    }
     setAllExercisePlans(prev => prev.map(p => {
       if (p.id === planId) {
         return {
@@ -1779,6 +1837,10 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   const addExerciseToPatientPlan = (patientId: string, exerciseData: Omit<ExerciseItem, 'id'>): ExerciseItem => {
+    if (isPatientSession) {
+      console.warn('RBAC Violation: Patients cannot add prescribed exercises.');
+      throw new Error('Unauthorized');
+    }
     const targetPatient = allPatients.find(p => p.id === patientId) || selectedPatient;
     const newExercise: ExerciseItem = {
       ...exerciseData,
