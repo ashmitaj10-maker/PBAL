@@ -54,6 +54,7 @@ export const PatientAppLayout: React.FC = () => {
   interface NavItem {
     id: ClinicScreen;
     label: string;
+    mobileLabel: string;
     icon: React.ElementType;
     badge?: number | string;
     description: string;
@@ -63,12 +64,14 @@ export const PatientAppLayout: React.FC = () => {
     {
       id: 'patient_portal',
       label: 'My Day & Meals',
+      mobileLabel: 'Meals',
       icon: Utensils,
       description: 'Daily meals, hydration & logs'
     },
     {
       id: 'patient_exercise',
       label: 'Guided Exercises',
+      mobileLabel: 'Exercises',
       icon: Dumbbell,
       badge: 'Visual Guides',
       description: 'Form diagrams & step-by-step guidance'
@@ -76,6 +79,7 @@ export const PatientAppLayout: React.FC = () => {
     {
       id: 'ai_copilot',
       label: 'Craving Search & Swaps',
+      mobileLabel: 'Craving AI',
       icon: Bot,
       badge: 'Cravings AI',
       description: 'Find healthy swaps & full recipes'
@@ -83,6 +87,7 @@ export const PatientAppLayout: React.FC = () => {
     {
       id: 'patient_chat',
       label: 'Dietitian Chat',
+      mobileLabel: 'Chat',
       icon: MessageSquare,
       badge: unreadChats > 0 ? unreadChats : undefined,
       description: 'Direct 2-way clinical messaging'
@@ -90,12 +95,14 @@ export const PatientAppLayout: React.FC = () => {
     {
       id: 'progress_dashboard',
       label: 'My Progress & Stats',
+      mobileLabel: 'Progress',
       icon: TrendingDown,
       description: 'Weight curves & body milestones'
     },
     {
       id: 'patient_profile',
       label: 'My Health Profile',
+      mobileLabel: 'Profile',
       icon: User,
       description: 'Clinical file & metabolic targets'
     }
@@ -284,7 +291,7 @@ export const PatientAppLayout: React.FC = () => {
           MAIN CONTENT AREA (SCROLLABLE RIGHT VIEWPORT)
           ========================================================================= */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
-        <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-12">
+        <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-28 md:pb-12">
           {activeScreen === 'patient_portal' && <PatientMobileHomeView />}
           {activeScreen === 'patient_exercise' && <PatientExerciseView />}
           {activeScreen === 'ai_copilot' && <AiCopilotView />}
@@ -295,31 +302,46 @@ export const PatientAppLayout: React.FC = () => {
       </div>
 
       {/* =========================================================================
-          MOBILE BOTTOM NAVIGATION STRIP
+          MOBILE BOTTOM NAVIGATION STRIP (RESPONSIVE, WRAPPING LABELS & PINNED BADGES)
           ========================================================================= */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 px-1.5 py-1 shadow-lg flex items-center justify-around overflow-x-auto no-scrollbar">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeScreen === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => navigateTo(item.id)}
-              className={`flex flex-col items-center py-1 px-1.5 rounded-xl text-[9px] font-bold transition-all relative shrink-0 ${
-                isActive ? 'text-teal-900 font-black' : 'text-slate-500'
-              }`}
-            >
-              <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-teal-100 text-teal-900 scale-105' : ''}`}>
-                <Icon className="w-4 h-4" />
-              </div>
-              <span className="mt-0.5 truncate max-w-[56px]">{item.label.split(' ')[0]}</span>
-              {item.badge && (
-                <span className="absolute top-0 right-0 w-2 h-2 rounded-full bg-emerald-500" />
-              )}
-            </button>
-          );
-        })}
-      </div>
+      <nav 
+        aria-label="Mobile Navigation"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-1 sm:px-2 py-1.5"
+      >
+        <div className="flex items-center justify-between sm:justify-around overflow-x-auto no-scrollbar gap-0.5 sm:gap-1 max-w-lg mx-auto">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeScreen === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => navigateTo(item.id)}
+                className={`flex-1 min-w-[50px] sm:min-w-[58px] max-w-[72px] flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition-all cursor-pointer group ${
+                  isActive ? 'text-teal-950 font-black' : 'text-slate-500 hover:text-slate-800 font-semibold'
+                }`}
+              >
+                <div className="relative">
+                  <div className={`p-1.5 rounded-xl transition-all ${
+                    isActive 
+                      ? 'bg-teal-100/90 text-teal-900 scale-105 shadow-2xs ring-1 ring-teal-300/60' 
+                      : 'text-slate-500 group-hover:bg-slate-100'
+                  }`}>
+                    <Icon className="w-4 h-4 shrink-0" />
+                  </div>
+                  {item.badge && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+                  )}
+                </div>
+                <span className={`text-[10px] sm:text-[11px] leading-tight mt-1 text-center truncate w-full tracking-tight ${
+                  isActive ? 'text-teal-950 font-bold' : 'text-slate-600'
+                }`}>
+                  {item.mobileLabel}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
 
     </div>
   );

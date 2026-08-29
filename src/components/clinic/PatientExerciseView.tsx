@@ -174,88 +174,86 @@ export const PatientExerciseView: React.FC = () => {
   const completedCount = (dailyLog.exercisesCompleted || []).length;
 
   return (
-    <div className="space-y-6 pb-16 animate-in fade-in duration-200">
+    <div className="space-y-4 sm:space-y-6 pb-20 animate-in fade-in duration-200 max-w-full overflow-hidden">
       
       {/* Top Banner: Clinical Prescribed Exercise Overview */}
-      <div className="bg-gradient-to-r from-[#183153] via-teal-900 to-emerald-900 text-white rounded-3xl p-6 sm:p-8 shadow-sm relative overflow-hidden">
+      <div className="bg-gradient-to-r from-[#183153] via-teal-900 to-emerald-900 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-sm relative overflow-hidden">
         <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 opacity-10 pointer-events-none">
           <Dumbbell className="w-64 h-64 text-white" />
         </div>
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-          <div className="space-y-2 max-w-2xl">
-            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-300">
-              <Stethoscope className="w-4 h-4 text-emerald-400" />
-              Doctor Prescribed Movement & Form Guide
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6 relative z-10 min-w-0">
+          <div className="space-y-1.5 sm:space-y-2 max-w-2xl min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-black uppercase tracking-wider text-emerald-300 flex-wrap">
+              <Stethoscope className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
+              <span>Doctor Prescribed Movement & Form Guide</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-white break-words">
               My Prescribed Exercise Plan
             </h1>
-            <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
+            <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed break-words">
               Personalized physical activities and exercises prescribed by your clinical dietitian with movement demonstrations, execution instructions, and custom advice.
             </p>
           </div>
 
-          {/* Quick Stats Pill */}
-          <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/20 shrink-0">
-            <div className="text-center px-2">
-              <span className="text-[10px] uppercase font-bold text-slate-300 block">Prescribed</span>
-              <span className="text-base font-black text-white">{displayExercises.length} Movements</span>
+          {/* Quick Stats Pill (Responsive 3-Column Grid without clipping) */}
+          <div className="grid grid-cols-3 gap-1 sm:gap-2 bg-white/10 backdrop-blur-md p-2.5 sm:p-3.5 rounded-2xl border border-white/20 w-full lg:w-auto lg:shrink-0">
+            <div className="text-center px-1 sm:px-2 min-w-0">
+              <span className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-300 block truncate">Prescribed</span>
+              <span className="text-xs sm:text-base font-black text-white block truncate">{displayExercises.length} Movements</span>
             </div>
-            <div className="w-px h-8 bg-white/20" />
-            <div className="text-center px-2">
-              <span className="text-[10px] uppercase font-bold text-slate-300 block">Weekly Target</span>
-              <span className="text-base font-black text-emerald-300">{exercisePlan?.weeklyGoalDays || 4} Days/Wk</span>
+            <div className="text-center px-1 sm:px-2 border-x border-white/20 min-w-0">
+              <span className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-300 block truncate">Weekly Target</span>
+              <span className="text-xs sm:text-base font-black text-emerald-300 block truncate">{exercisePlan?.weeklyGoalDays || 4} Days/Wk</span>
             </div>
-            <div className="w-px h-8 bg-white/20" />
-            <div className="text-center px-2">
-              <span className="text-[10px] uppercase font-bold text-slate-300 block">Completed Today</span>
-              <span className="text-base font-black text-amber-300">{completedCount} Done</span>
+            <div className="text-center px-1 sm:px-2 min-w-0">
+              <span className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-300 block truncate">Completed Today</span>
+              <span className="text-xs sm:text-base font-black text-amber-300 block truncate">{completedCount} Done</span>
             </div>
           </div>
         </div>
 
-        {/* Doctor's Clinical Note */}
+        {/* Doctor's Clinical Note (Full Text Wrapping without clipping) */}
         {exercisePlan?.doctorNotes && (
-          <div className="mt-4 pt-3 border-t border-white/15 text-xs text-emerald-200 flex items-start gap-2">
+          <div className="mt-3.5 sm:mt-4 pt-3 border-t border-white/15 text-xs text-emerald-200 flex items-start gap-2 min-w-0">
             <Info className="w-4 h-4 text-emerald-300 shrink-0 mt-0.5" />
-            <span>
-              <strong>Dietitian's Note:</strong> {exercisePlan.doctorNotes}
+            <span className="min-w-0 flex-1 break-words leading-relaxed">
+              <strong className="text-white font-bold">Dietitian's Note:</strong> {exercisePlan.doctorNotes}
             </span>
           </div>
         )}
       </div>
 
       {/* Search & Category Filter Bar */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200 shadow-sm space-y-3 min-w-0">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 min-w-0">
           
           {/* Search Box */}
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-0">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
             <input
               type="text"
               placeholder="Search your prescribed exercises (e.g. walking, squats, glutes, core, yoga)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full text-xs sm:text-sm pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-teal-500 font-medium text-slate-900 transition-all"
+              className="w-full text-xs sm:text-sm pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-teal-500 font-medium text-slate-900 transition-all outline-none"
             />
           </div>
 
-          <span className="text-xs text-slate-500 font-medium self-center">
+          <span className="text-xs text-slate-500 font-medium self-start sm:self-center shrink-0">
             Showing {filteredExercises.length} prescribed exercise{filteredExercises.length === 1 ? '' : 's'}
           </span>
         </div>
 
         {/* Category Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 no-scrollbar min-w-0">
           {(['All', 'Strength & Tone', 'Core & Posture', 'Cardio & Metabolic', 'Mobility & Joint Health'] as ExerciseCategoryFilter[]).map((cat) => {
             const isSelected = selectedCategory === cat;
             return (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
                   isSelected
                     ? 'bg-teal-700 text-white shadow-xs'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -269,46 +267,46 @@ export const PatientExerciseView: React.FC = () => {
       </div>
 
       {/* Prescribed Exercises Grid */}
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8 min-w-0">
         {(filteredExercises || []).map((exercise) => {
           const isCompleted = (dailyLog.exercisesCompleted || []).includes(exercise.id);
 
           return (
             <div 
               key={exercise.id}
-              className={`bg-white rounded-3xl border transition-all hover:shadow-md overflow-hidden ${
+              className={`bg-white rounded-2xl sm:rounded-3xl border transition-all hover:shadow-md overflow-hidden min-w-0 ${
                 isCompleted 
                   ? 'border-emerald-400 ring-2 ring-emerald-100 bg-gradient-to-b from-emerald-50/20 to-white' 
                   : 'border-slate-200 shadow-sm'
               }`}
             >
               
-              <div className="p-6 space-y-5">
+              <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 min-w-0">
                 
                 {/* Header: Title, Category Badge & Completion Toggle */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-lg border bg-teal-50 text-teal-800 border-teal-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-1 flex-wrap">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg border bg-teal-50 text-teal-800 border-teal-200">
                         {exercise.category}
                       </span>
-                      <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md">
+                      <span className="text-[11px] sm:text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
                         ⏱️ Prescribed: {exercise.recommendedDose.sets} {exercise.recommendedDose.sets === 1 ? 'Set' : 'Sets'} • {exercise.recommendedDose.repsOrDuration}
                       </span>
                     </div>
 
-                    <h3 className="text-xl font-black text-slate-900 leading-snug">
+                    <h3 className="text-lg sm:text-xl font-black text-slate-900 leading-snug break-words">
                       {exercise.name}
                     </h3>
-                    <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                    <p className="text-xs text-slate-600 mt-0.5 leading-relaxed break-words">
                       {exercise.purpose}
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                  <div className="flex items-center gap-2 self-stretch sm:self-center shrink-0">
                     <button
                       onClick={() => handleToggleCompleted(exercise.id)}
-                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      className={`w-full sm:w-auto flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         isCompleted
                           ? 'bg-emerald-600 text-white shadow-2xs'
                           : 'bg-slate-100 text-slate-700 hover:bg-emerald-50 hover:text-emerald-800'
@@ -322,13 +320,13 @@ export const PatientExerciseView: React.FC = () => {
 
                 {/* 4-POSE MOVEMENT DEMONSTRATION GRAPHIC OR WRITTEN ACTIVITY BANNER */}
                 {exercise.compositeImageUrl ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black uppercase tracking-wider text-teal-900 flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4 text-teal-600" />
-                        4-Pose Movement Demonstration Sequence:
+                  <div className="space-y-2.5 sm:space-y-3 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2">
+                      <span className="text-xs font-black uppercase tracking-wider text-teal-900 flex items-center gap-1.5 break-words">
+                        <Sparkles className="w-4 h-4 text-teal-600 shrink-0" />
+                        <span>4-Pose Movement Demonstration:</span>
                       </span>
-                      <span className="text-[11px] text-teal-700 font-bold bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
+                      <span className="text-[10px] text-teal-700 font-bold bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200 self-start sm:self-auto">
                         Start ➔ Movement ➔ Peak ➔ Lockout
                       </span>
                     </div>
@@ -339,7 +337,7 @@ export const PatientExerciseView: React.FC = () => {
                         setActiveExerciseModal(exercise);
                         setSelectedStepIndex(0);
                       }}
-                      className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 group cursor-pointer shadow-2xs hover:border-teal-400 transition-all"
+                      className="relative rounded-xl sm:rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 group cursor-pointer shadow-2xs hover:border-teal-400 transition-all min-w-0"
                     >
                       <img
                         src={exercise.compositeImageUrl}
@@ -347,16 +345,16 @@ export const PatientExerciseView: React.FC = () => {
                         className="w-full object-cover group-hover:scale-[1.01] transition-transform duration-300"
                         loading="lazy"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-4">
-                        <span className="text-xs font-bold text-white bg-slate-900/80 px-3 py-1.5 rounded-xl backdrop-blur-sm flex items-center gap-1.5">
-                          <Maximize2 className="w-3.5 h-3.5" /> Click to Inspect Form Breakdown
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-3 sm:p-4">
+                        <span className="text-xs font-bold text-white bg-slate-900/80 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl backdrop-blur-sm flex items-center gap-1.5">
+                          <Maximize2 className="w-3.5 h-3.5" /> Inspect Breakdown
                         </span>
                       </div>
                     </div>
 
                     {/* 4 Step Summary Badges if poses exist */}
                     {exercise.photoSequence && exercise.photoSequence.length > 0 && (
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 min-w-0">
                         {exercise.photoSequence.map((pose, pIdx) => (
                           <div 
                             key={pIdx} 
@@ -364,20 +362,20 @@ export const PatientExerciseView: React.FC = () => {
                               setActiveExerciseModal(exercise);
                               setSelectedStepIndex(pIdx);
                             }}
-                            className="p-2.5 bg-slate-50 hover:bg-teal-50/60 rounded-xl border border-slate-200 text-xs space-y-1 transition-all cursor-pointer"
+                            className="p-2 sm:p-2.5 bg-slate-50 hover:bg-teal-50/60 rounded-xl border border-slate-200 text-xs space-y-1 transition-all cursor-pointer min-w-0"
                           >
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-black uppercase text-teal-800">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="text-[9px] sm:text-[10px] font-black uppercase text-teal-800 shrink-0">
                                 Pose {pose.stepNumber}
                               </span>
-                              <span className="text-[10px] text-slate-400 font-mono">
+                              <span className="text-[9px] sm:text-[10px] text-slate-400 font-mono truncate">
                                 {pose.motionDirection}
                               </span>
                             </div>
-                            <div className="font-bold text-slate-900 truncate">
+                            <div className="font-bold text-slate-900 text-xs truncate">
                               {pose.stepTitle.split('.')[1] || pose.stepTitle}
                             </div>
-                            <p className="text-[11px] text-slate-600 leading-snug line-clamp-2">
+                            <p className="text-[10px] sm:text-[11px] text-slate-600 leading-snug line-clamp-2 break-words">
                               {pose.postureCue}
                             </p>
                           </div>
@@ -386,31 +384,31 @@ export const PatientExerciseView: React.FC = () => {
                     )}
                   </div>
                 ) : (
-                  <div className="p-4 bg-teal-50/60 rounded-2xl border border-teal-200 space-y-2">
+                  <div className="p-3.5 sm:p-4 bg-teal-50/60 rounded-xl sm:rounded-2xl border border-teal-200 space-y-1.5 min-w-0">
                     <div className="flex items-center gap-2 text-xs font-bold text-teal-950">
-                      <FileText className="w-4 h-4 text-teal-700" />
+                      <FileText className="w-4 h-4 text-teal-700 shrink-0" />
                       <span>Doctor's Execution Protocol:</span>
                     </div>
-                    <p className="text-xs text-slate-700 leading-relaxed">
+                    <p className="text-xs text-slate-700 leading-relaxed break-words">
                       {exercise.correctForm}
                     </p>
                   </div>
                 )}
 
                 {/* Target Muscles & Breathing Guide */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100 text-xs">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 pt-2 border-t border-slate-100 text-xs min-w-0">
                   
                   {/* Prime Movers & Stabilizers */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 min-w-0">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                       Target Muscle Focus:
                     </span>
                     <div className="flex flex-wrap gap-1.5">
-                      <span className="bg-emerald-100 text-emerald-900 px-2.5 py-1 rounded-lg font-bold border border-emerald-200">
+                      <span className="bg-emerald-100 text-emerald-900 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-bold border border-emerald-200 text-xs">
                         🎯 {exercise.primaryMover}
                       </span>
                       {exercise.targetMuscles.slice(0, 3).map((muscle, mIdx) => (
-                        <span key={mIdx} className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-medium border border-slate-200">
+                        <span key={mIdx} className="bg-slate-100 text-slate-700 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-medium border border-slate-200 text-xs">
                           {muscle}
                         </span>
                       ))}
@@ -418,13 +416,13 @@ export const PatientExerciseView: React.FC = () => {
                   </div>
 
                   {/* Breathing & Doctor Guidance */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 min-w-0">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                       Breathing & Cadence:
                     </span>
-                    <div className="p-2.5 bg-emerald-50/70 rounded-xl border border-emerald-200/80 text-[11px] text-emerald-950 flex items-start gap-2">
+                    <div className="p-2.5 bg-emerald-50/70 rounded-xl border border-emerald-200/80 text-[11px] text-emerald-950 flex items-start gap-2 min-w-0">
                       <Wind className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
-                      <span>{exercise.breathingGuidance}</span>
+                      <span className="min-w-0 flex-1 break-words">{exercise.breathingGuidance}</span>
                     </div>
                   </div>
 
@@ -433,16 +431,16 @@ export const PatientExerciseView: React.FC = () => {
               </div>
 
               {/* Card Footer: View Full Step-by-Step Instructions */}
-              <div className="p-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between gap-3">
+              <div className="p-3.5 sm:p-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between gap-3">
                 <button
                   onClick={() => {
                     setActiveExerciseModal(exercise);
                     setSelectedStepIndex(0);
                   }}
-                  className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors shadow-xs cursor-pointer"
+                  className="w-full py-2 sm:py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors shadow-xs cursor-pointer"
                 >
-                  <BookOpen className="w-4 h-4 text-teal-300" />
-                  View Detailed Instructions & Form Guide
+                  <BookOpen className="w-4 h-4 text-teal-300 shrink-0" />
+                  <span>View Detailed Instructions & Form Guide</span>
                 </button>
               </div>
 
@@ -455,43 +453,43 @@ export const PatientExerciseView: React.FC = () => {
           DETAILED EXERCISE MODAL & FULL-SIZE MOVEMENT SEQUENCE INSPECTOR
           ========================================================================= */}
       {activeExerciseModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[92vh] shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-4xl w-full max-h-[92vh] shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto min-w-0">
             
             {/* Modal Header */}
-            <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-4 bg-gradient-to-r from-teal-50/60 to-white">
-              <div>
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-teal-700 text-white">
+            <div className="p-4 sm:p-6 border-b border-slate-100 flex items-start justify-between gap-3 bg-gradient-to-r from-teal-50/60 to-white min-w-0">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-1 flex-wrap">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 sm:px-2.5 py-0.5 rounded-md bg-teal-700 text-white">
                     {activeExerciseModal.category}
                   </span>
-                  <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md">
+                  <span className="text-[11px] sm:text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 sm:px-2.5 py-0.5 rounded-md">
                     ⏱️ {activeExerciseModal.recommendedDose.sets} {activeExerciseModal.recommendedDose.sets === 1 ? 'Set' : 'Sets'} • {activeExerciseModal.recommendedDose.repsOrDuration}
                   </span>
                   {activeExerciseModal.tempoGuidance && (
-                    <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
+                    <span className="text-[11px] sm:text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
                       Tempo: {activeExerciseModal.tempoGuidance}
                     </span>
                   )}
                 </div>
-                <h2 className="text-xl font-black text-slate-900">
+                <h2 className="text-lg sm:text-xl font-black text-slate-900 break-words">
                   {activeExerciseModal.name}
                 </h2>
-                <p className="text-xs text-slate-600 mt-0.5">
+                <p className="text-xs text-slate-600 mt-0.5 break-words">
                   {activeExerciseModal.purpose}
                 </p>
               </div>
 
               <button
                 onClick={() => setActiveExerciseModal(null)}
-                className="p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-1.5 sm:p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
               >
                 ✕
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 overflow-y-auto space-y-6">
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 min-w-0">
               
               {/* FULL-SIZE 4-POSE MOVEMENT SEQUENCE GRAPHIC IF AVAILABLE */}
               {activeExerciseModal.compositeImageUrl && (
