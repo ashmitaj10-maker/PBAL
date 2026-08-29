@@ -13,6 +13,7 @@ import { InvoicePreviewView } from './components/clinic/InvoicePreviewView';
 // Phase 2 Views
 import { PatientAssessmentView } from './components/clinic/PatientAssessmentView';
 import { AiMealBuilderView } from './components/clinic/AiMealBuilderView';
+import { RecipeLibraryView } from './components/clinic/RecipeLibraryView';
 import { ExercisePlannerView } from './components/clinic/ExercisePlannerView';
 import { PatientMobileHomeView } from './components/clinic/PatientMobileHomeView';
 import { RecipeDetailModal } from './components/clinic/RecipeDetailModal';
@@ -98,6 +99,9 @@ const ClinicAppContent: React.FC = () => {
 
           {/* Phase 2 Screen 2: AI Clinical Meal Builder */}
           {activeScreen === 'ai_meal_builder' && <AiMealBuilderView />}
+
+          {/* Phase 2 Screen 2b: Master Recipe & Protocol Library */}
+          {activeScreen === 'recipe_library' && <RecipeLibraryView />}
 
           {/* Phase 2 Screen 3: Clinical Exercise Planner */}
           {activeScreen === 'exercise_planner' && <ExercisePlannerView />}

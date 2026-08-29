@@ -76,6 +76,8 @@ export const ClinicTopBar: React.FC<ClinicTopBarProps> = ({
         return 'Clinical Intake & Anthropometrics';
       case 'ai_meal_builder':
         return 'AI Clinical Meal Planner';
+      case 'recipe_library':
+        return 'Recipe & Protocol Library';
       case 'exercise_planner':
         return 'Therapeutic Exercise & Movement Plan';
       case 'patient_portal':

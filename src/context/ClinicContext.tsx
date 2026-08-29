@@ -84,6 +84,7 @@ export type ClinicScreen =
   | 'patient_profile' 
   | 'assessment' 
   | 'ai_meal_builder' 
+  | 'recipe_library'
   | 'exercise_planner' 
   | 'patient_portal' 
   | 'payments' 
@@ -249,7 +250,14 @@ interface ClinicContextType {
   removeExerciseFromPatientPlan: (patientId: string, exerciseId: string) => void;
   getPatientAssignedExercises: (patientId: string) => ExerciseItem[];
 
-  // Phase 2: Recipe Modal & Details
+  // Phase 2: Recipe Modal & Shared Library
+  recipes: RecipeDetail[];
+  addRecipeToLibrary: (recipe: Omit<RecipeDetail, 'id'> | RecipeDetail) => RecipeDetail;
+  updateRecipeInLibrary: (id: string, updates: Partial<RecipeDetail>) => void;
+  deleteRecipeFromLibrary: (id: string) => void;
+  getRecipeById: (id: string) => RecipeDetail | undefined;
+  saveOptionAsCustomRecipe: (option: MealOption, sourcePatient?: { id: string; name: string }, isAiGenerated?: boolean) => RecipeDetail;
+  addRecipeToPatientPlan: (patientId: string, recipe: RecipeDetail, slotType?: string, dayIndex?: number) => void;
   selectedRecipe: RecipeDetail | null;
   isRecipeModalOpen: boolean;
   openRecipeModal: (recipeOrOption: RecipeDetail | MealOption | string) => void;
@@ -372,7 +380,8 @@ const STORAGE_KEYS = {
   PHOTOS: 'pbl_clinic_photos_v3',
   REMINDERS: 'pbl_clinic_reminders_v3',
   CHATS: 'pbl_clinic_chats_v3',
-  INVITES: 'pbl_clinic_patient_invites_v2'
+  INVITES: 'pbl_clinic_patient_invites_v2',
+  RECIPES: 'pbl_clinic_recipes_v3'
 };
 
 export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -617,6 +626,19 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }));
   });
 
+  const [allRecipes, setAllRecipes] = useState<RecipeDetail[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.RECIPES);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return Object.values(RECIPE_CATALOG);
+  });
+
   // Save changes to localStorage
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.PATIENTS, JSON.stringify(allPatients));
@@ -673,6 +695,10 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.CHATS, JSON.stringify(allChatMessages));
   }, [allChatMessages]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.RECIPES, JSON.stringify(allRecipes));
+  }, [allRecipes]);
 
   const currentClinic = clinics.find(c => c.id === selectedClinicId) || clinics[0];
 
@@ -1870,15 +1896,196 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     return [];
   };
 
+  // Phase 2: Recipe Library & Custom Formulations
+  const addRecipeToLibrary = (recipeInput: Omit<RecipeDetail, 'id'> | RecipeDetail): RecipeDetail => {
+    const id = ('id' in recipeInput && recipeInput.id) ? recipeInput.id : `rec-custom-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const nowIso = new Date().toISOString();
+    const newRecipe: RecipeDetail = {
+      ...recipeInput,
+      id,
+      isCustom: ('isCustom' in recipeInput) ? recipeInput.isCustom : true,
+      createdBy: ('createdBy' in recipeInput && recipeInput.createdBy) ? recipeInput.createdBy : (currentUser?.name || 'Dr. Ashmita Joshi, MD, RD'),
+      createdAt: ('createdAt' in recipeInput && recipeInput.createdAt) ? recipeInput.createdAt : nowIso,
+      updatedAt: nowIso
+    };
+
+    setAllRecipes(prev => {
+      const exists = prev.some(r => r.id === newRecipe.id || (r.name.toLowerCase() === newRecipe.name.toLowerCase() && r.isCustom));
+      if (exists) {
+        return prev.map(r => (r.id === newRecipe.id || (r.name.toLowerCase() === newRecipe.name.toLowerCase() && r.isCustom)) ? { ...r, ...newRecipe } : r);
+      }
+      return [newRecipe, ...prev];
+    });
+
+    const act: ClinicActivity = {
+      id: `act-${Date.now()}`,
+      clinicId: currentClinic.id,
+      type: 'plan_renewed',
+      title: 'Recipe Added to Library',
+      description: `Saved "${newRecipe.name}" (${newRecipe.calories} kcal) to shared Recipe Library.`,
+      timestamp: 'Just now',
+      user: currentUser?.name || 'Doctor'
+    };
+    setAllActivities(prev => [act, ...prev]);
+
+    return newRecipe;
+  };
+
+  const updateRecipeInLibrary = (id: string, updates: Partial<RecipeDetail>) => {
+    setAllRecipes(prev => prev.map(r => {
+      if (r.id === id) {
+        return {
+          ...r,
+          ...updates,
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return r;
+    }));
+  };
+
+  const deleteRecipeFromLibrary = (id: string) => {
+    setAllRecipes(prev => prev.filter(r => r.id !== id));
+  };
+
+  const getRecipeById = (id: string): RecipeDetail | undefined => {
+    return allRecipes.find(r => r.id === id) || RECIPE_CATALOG[id];
+  };
+
+  const saveOptionAsCustomRecipe = (option: MealOption, sourcePatient?: { id: string; name: string }, isAiGenerated?: boolean): RecipeDetail => {
+    const ingredientsFormatted = (option.ingredients || []).map(i => {
+      if (typeof i === 'string') {
+        const parts = i.split(':');
+        if (parts.length === 2) {
+          return { item: parts[0].trim(), amount: parts[1].trim() };
+        }
+        return { item: i, amount: '1 portion' };
+      }
+      return i;
+    });
+
+    const stepsFormatted = (option.instructions && option.instructions.length > 0)
+      ? option.instructions
+      : ['Prepare cleanly according to clinical dietary guidelines and serve fresh.'];
+
+    const recipe: RecipeDetail = {
+      id: `rec-lib-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      name: option.name.trim(),
+      category: option.slotType ? option.slotType.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Clinical Meal',
+      slotType: option.slotType || 'breakfast',
+      prepTimeMinutes: option.prepTimeMinutes || 10,
+      cookTimeMinutes: 10,
+      servings: 1,
+      servingSizeDescription: option.portion || `${option.portionGrams || 200}g`,
+      calories: Number(option.calories) || 0,
+      protein: Number(option.protein) || 0,
+      carbs: Number(option.carbs) || 0,
+      fat: Number(option.fat) || 0,
+      fiber: Number(option.fiber) || 0,
+      glycemicIndex: option.glycemicIndex || 'Low',
+      micronutrients: option.micronutrients || {
+        vitaminC: 25,
+        calcium: 15,
+        iron: 12,
+        magnesium: 20,
+        potassium: 18
+      },
+      ingredients: ingredientsFormatted.length ? ingredientsFormatted : [{ item: 'Fresh wholesome ingredients', amount: '1 portion' }],
+      steps: stepsFormatted,
+      dietaryTags: option.tags || [option.glycemicIndex ? `${option.glycemicIndex} GI` : 'Clinical Nutrition'],
+      chefTip: 'Nutrient-dense formulation designed for sustained glycemic control.',
+      clinicalBenefit: option.clinicalBenefit || option.description || 'Formulated by dietitian for optimal metabolic balance.',
+      imageUrl: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&q=80&w=600',
+      isCustom: !isAiGenerated,
+      isAiGenerated: !!isAiGenerated,
+      sourcePatientId: sourcePatient?.id,
+      sourcePatientName: sourcePatient?.name,
+      createdBy: currentUser?.name || 'Dr. Ashmita Joshi, MD, RD',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    return addRecipeToLibrary(recipe);
+  };
+
+  const addRecipeToPatientPlan = (patientId: string, recipe: RecipeDetail, slotType?: string) => {
+    const targetPatient = allPatients.find(p => p.id === patientId) || selectedPatient;
+    const targetSlotType = slotType || recipe.slotType || 'breakfast';
+
+    const newOption: MealOption = {
+      id: `opt-rec-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      slotType: targetSlotType,
+      name: recipe.name,
+      description: recipe.clinicalBenefit,
+      portion: recipe.servingSizeDescription || '1 serving',
+      portionGrams: 200,
+      calories: recipe.calories,
+      protein: recipe.protein,
+      carbs: recipe.carbs,
+      fat: recipe.fat,
+      fiber: recipe.fiber,
+      glycemicIndex: recipe.glycemicIndex || 'Low',
+      ingredients: (recipe.ingredients || []).map(i => `${i.amount} ${i.item}`),
+      instructions: recipe.steps || [],
+      clinicalBenefit: recipe.clinicalBenefit,
+      prepTimeMinutes: (recipe.prepTimeMinutes || 0) + (recipe.cookTimeMinutes || 0),
+      isCustom: true
+    };
+
+    setAllClinicalMealPlans(prev => {
+      const existingPlan = prev.find(p => p.patientId === patientId);
+      if (existingPlan) {
+        const updatedSlots = (existingPlan.slots || []).map(s => {
+          if (s.slotType === targetSlotType) {
+            return {
+              ...s,
+              options: [...(s.options || []), newOption],
+              selectedOptionId: newOption.id
+            };
+          }
+          return s;
+        });
+
+        const slotExists = updatedSlots.some(s => s.slotType === targetSlotType);
+        const finalSlots = slotExists ? updatedSlots : [
+          ...updatedSlots,
+          {
+            slotType: targetSlotType,
+            slotName: targetSlotType.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()),
+            defaultTime: '08:30 AM',
+            options: [newOption],
+            selectedOptionId: newOption.id
+          }
+        ];
+
+        return prev.map(p => p.id === existingPlan.id ? { ...p, slots: finalSlots } : p);
+      }
+      return prev;
+    });
+
+    const act: ClinicActivity = {
+      id: `act-${Date.now()}`,
+      clinicId: currentClinic.id,
+      type: 'plan_renewed',
+      title: 'Recipe Added to Patient Plan',
+      description: `Added "${recipe.name}" from Recipe Library to ${targetPatient?.name || 'patient'}'s diet plan.`,
+      timestamp: 'Just now',
+      patientId,
+      patientName: targetPatient?.name,
+      user: currentUser?.name || 'Doctor'
+    };
+    setAllActivities(prev => [act, ...prev]);
+  };
+
   // Phase 2: Recipe Modal
   const openRecipeModal = (recipeOrOption: RecipeDetail | MealOption | string) => {
     if (typeof recipeOrOption === 'string') {
-      const found = RECIPE_CATALOG[recipeOrOption];
+      const found = allRecipes.find(r => r.id === recipeOrOption) || RECIPE_CATALOG[recipeOrOption];
       if (found) {
         setSelectedRecipe(found);
       } else {
         // Fallback default recipe
-        setSelectedRecipe(Object.values(RECIPE_CATALOG)[0]);
+        setSelectedRecipe(allRecipes[0] || Object.values(RECIPE_CATALOG)[0]);
       }
     } else if ('servings' in recipeOrOption) {
       // RecipeDetail
@@ -1886,9 +2093,9 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     } else {
       // MealOption to RecipeDetail conversion
       const mo = recipeOrOption as MealOption;
-      const catalogMatch = RECIPE_CATALOG[mo.id];
-      if (catalogMatch) {
-        setSelectedRecipe(catalogMatch);
+      const libraryMatch = allRecipes.find(r => r.id === mo.id || r.name.toLowerCase() === mo.name.toLowerCase()) || RECIPE_CATALOG[mo.id];
+      if (libraryMatch) {
+        setSelectedRecipe(libraryMatch);
       } else {
         setSelectedRecipe({
           id: mo.id,
@@ -1904,6 +2111,7 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           carbs: mo.carbs,
           fat: mo.fat,
           fiber: mo.fiber,
+          glycemicIndex: mo.glycemicIndex || 'Low',
           micronutrients: mo.micronutrients || {
             vitaminC: 35,
             calcium: 20,
@@ -2583,6 +2791,14 @@ export const ClinicProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         updateExerciseInPatientPlan,
         removeExerciseFromPatientPlan,
         getPatientAssignedExercises,
+        // Recipe Library & Custom Formulations
+        recipes: allRecipes,
+        addRecipeToLibrary,
+        updateRecipeInLibrary,
+        deleteRecipeFromLibrary,
+        getRecipeById,
+        saveOptionAsCustomRecipe,
+        addRecipeToPatientPlan,
         selectedRecipe,
         isRecipeModalOpen,
         openRecipeModal,

@@ -35,7 +35,9 @@ import {
   Search,
   CheckCheck,
   AlertCircle,
-  Bell
+  Bell,
+  Bookmark,
+  BookmarkCheck
 } from 'lucide-react';
 import { 
   MealPlanMode, 
@@ -43,7 +45,8 @@ import {
   ClinicalMealPlan, 
   MealSlot, 
   MealOption, 
-  DayMealPlan 
+  DayMealPlan,
+  RecipeDetail
 } from '../../types/clinic';
 import { regenerateSingleMealSlot, generateClinicalMealPlan } from '../../services/aiMealService';
 import { 
@@ -92,6 +95,8 @@ export const AiMealBuilderView: React.FC = () => {
     setSelectedMealPlanId, 
     getPatientAssessments, 
     openRecipeModal,
+    recipes,
+    saveOptionAsCustomRecipe,
     currentUser,
     currentClinic
   } = useClinic();
@@ -399,14 +404,23 @@ export const AiMealBuilderView: React.FC = () => {
 
     commitSlotsUpdate(updatedSlots, `Added custom meal "${customName.trim()}" to ${swapModalSlot.slotName || swapModalSlot.slotType}`);
 
+    // Auto-save to shared Recipe Library so it is immediately reusable across all patients!
+    saveOptionAsCustomRecipe(customOption, { id: patient.id, name: patient.name });
+
     // Reset custom form
     setCustomName('');
     setCustomIngredientsText('');
     setCustomInstructionsText('');
     setCustomClinicalBenefit('');
     setSwapModalSlot(null);
-    setSaveSuccessMsg(`Added custom item "${customOption.name}"!`);
-    setTimeout(() => setSaveSuccessMsg(null), 3000);
+    setSaveSuccessMsg(`Added "${customOption.name}" to diet plan and saved to Recipe Library!`);
+    setTimeout(() => setSaveSuccessMsg(null), 3500);
+  };
+
+  const handleSaveOptionToLibrary = (option: MealOption) => {
+    saveOptionAsCustomRecipe(option, { id: patient.id, name: patient.name }, !option.isCustom);
+    setSaveSuccessMsg(`Saved "${option.name}" to shared Recipe Library! Available for all patients.`);
+    setTimeout(() => setSaveSuccessMsg(null), 3500);
   };
 
   // -------------------------------------------------------------
@@ -683,14 +697,21 @@ export const AiMealBuilderView: React.FC = () => {
     setTimeout(() => setSaveSuccessMsg(null), 4000);
   };
 
-  // Filter recipes for the AI Suggest & Catalog tab
-  const filteredCatalogRecipes = Object.values(RECIPE_CATALOG).filter(r => {
+  // Filter recipes from shared Recipe Library (including dietitian custom recipes, saved AI, and core protocols)
+  const filteredLibraryRecipes = recipes.filter(r => {
     const matchesSearch = !searchRecipeQuery.trim() || 
       r.name.toLowerCase().includes(searchRecipeQuery.toLowerCase()) ||
-      r.category.toLowerCase().includes(searchRecipeQuery.toLowerCase()) ||
-      r.clinicalBenefit.toLowerCase().includes(searchRecipeQuery.toLowerCase());
+      (r.category || '').toLowerCase().includes(searchRecipeQuery.toLowerCase()) ||
+      (r.clinicalBenefit || '').toLowerCase().includes(searchRecipeQuery.toLowerCase()) ||
+      (r.ingredients || []).some(i => i.item.toLowerCase().includes(searchRecipeQuery.toLowerCase())) ||
+      (r.dietaryTags || []).some(t => t.toLowerCase().includes(searchRecipeQuery.toLowerCase()));
     
-    const matchesCategory = categoryFilter === 'All' || r.category.toLowerCase().includes(categoryFilter.toLowerCase());
+    const matchesCategory = categoryFilter === 'All' || 
+      (categoryFilter === 'Custom' && r.isCustom && !r.isAiGenerated) ||
+      (categoryFilter === 'Saved AI' && r.isAiGenerated) ||
+      (r.category || '').toLowerCase().includes(categoryFilter.toLowerCase()) ||
+      (r.dietaryTags || []).some(t => t.toLowerCase().includes(categoryFilter.toLowerCase()));
+      
     return matchesSearch && matchesCategory;
   });
 
@@ -740,6 +761,16 @@ export const AiMealBuilderView: React.FC = () => {
           <div className="flex items-center flex-wrap gap-2.5">
             {/* Patient Selector */}
             <PatientSelector onSelect={(p) => handlePatientSelect(p.id)} />
+
+            {/* Recipe Library Access */}
+            <button
+              onClick={() => navigateTo('recipe_library')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-50 border border-emerald-200 text-emerald-900 hover:bg-emerald-100 transition-colors cursor-pointer"
+              title="Browse, search, and manage the shared Recipe Library"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Recipe Library ({recipes.length})</span>
+            </button>
 
             {/* Edit Targets & Guidelines */}
             <button
@@ -1255,8 +1286,25 @@ export const AiMealBuilderView: React.FC = () => {
                             )}
                           </div>
 
-                          {/* Action Toolbar: View Recipe, Edit Option, Duplicate, Delete */}
+                          {/* Action Toolbar: View Recipe, Save to Library, Edit Option, Duplicate, Delete */}
                           <div className="flex items-center gap-1">
+                            {(() => {
+                              const isSavedInLibrary = recipes.some(r => r.name.toLowerCase() === option.name.toLowerCase());
+                              return (
+                                <button
+                                  onClick={() => handleSaveOptionToLibrary(option)}
+                                  className={`p-1 rounded-md cursor-pointer transition-colors ${
+                                    isSavedInLibrary 
+                                      ? 'text-teal-700 bg-teal-50 hover:bg-teal-100' 
+                                      : 'text-slate-400 hover:text-teal-700 hover:bg-teal-50'
+                                  }`}
+                                  title={isSavedInLibrary ? 'Saved in shared Recipe Library' : 'Save to Recipe Library for other patients'}
+                                >
+                                  {isSavedInLibrary ? <BookmarkCheck className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}
+                                </button>
+                              );
+                            })()}
+
                             <button
                               onClick={() => openRecipeModal(option)}
                               className="p-1 text-slate-400 hover:text-[#183153] hover:bg-slate-100 rounded-md cursor-pointer"
@@ -1417,46 +1465,85 @@ export const AiMealBuilderView: React.FC = () => {
               </button>
             </div>
 
-            {/* TWO PRIMARY TABS: AI SUGGEST vs ADD CUSTOM ITEM */}
-            <div className="p-3 bg-slate-100 border-b border-slate-200 flex items-center gap-2">
+            {/* THREE PRIMARY TABS: AI SUGGEST vs MY RECIPE LIBRARY vs ADD CUSTOM RECIPE */}
+            <div className="p-3 bg-slate-100 border-b border-slate-200 flex flex-wrap items-center gap-2">
               <button
                 onClick={() => setSwapModalTab('ai_suggest')}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
                   swapModalTab === 'ai_suggest'
                     ? 'bg-white text-[#183153] shadow-xs border border-slate-200'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-                <span>1. AI Suggest & Recipe Library</span>
+                <span>1. AI Suggestions</span>
+              </button>
+
+              <button
+                onClick={() => setSwapModalTab('recipe_library')}
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+                  swapModalTab === 'recipe_library'
+                    ? 'bg-white text-[#183153] shadow-xs border border-slate-200'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
+                <span>2. My Recipe Library ({recipes.length})</span>
               </button>
 
               <button
                 onClick={() => setSwapModalTab('custom_item')}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
                   swapModalTab === 'custom_item'
                     ? 'bg-teal-600 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <Edit3 className="w-3.5 h-3.5" />
-                <span>2. Add Custom Item (Manual Entry)</span>
+                <span>3. Add Custom Recipe (Manual)</span>
               </button>
             </div>
 
             {/* TAB CONTENT */}
             <div className="p-5 overflow-y-auto flex-1">
               
-              {/* TAB 1: AI SUGGEST & RECIPE CATALOG */}
+              {/* TAB 1: AI SUGGESTIONS */}
               {swapModalTab === 'ai_suggest' && (
                 <div className="space-y-4">
-                  {/* Search and Category Filter */}
+                  {/* AI Generate New Variations Quick Button */}
+                  <div className="p-4 bg-gradient-to-r from-teal-50 via-emerald-50 to-teal-50 border border-teal-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-xl bg-teal-600 text-white shrink-0">
+                        <Sparkles className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <strong className="block text-xs font-bold text-teal-950">
+                          AI Formulation Engine for {patient.name}
+                        </strong>
+                        <span className="text-[11px] text-teal-800">
+                          Synthesizes 3 clinical options tailored to {patient.foodPreference} preference and active metabolic targets.
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        handleRegenerateSlot(swapModalSlot.slotType);
+                        setSwapModalSlot(null);
+                      }}
+                      className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl shrink-0 cursor-pointer shadow-md flex items-center gap-1.5"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Synthesize 3 AI Variations</span>
+                    </button>
+                  </div>
+
+                  {/* Search and Category Filter for Catalog */}
                   <div className="flex flex-col sm:flex-row items-center gap-3">
                     <div className="relative flex-1 w-full">
                       <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                       <input
                         type="text"
-                        placeholder="Search recipes by name, ingredient, or benefit..."
+                        placeholder="Search AI recipe variations by name or benefit..."
                         value={searchRecipeQuery}
                         onChange={(e) => setSearchRecipeQuery(e.target.value)}
                         className="w-full text-xs pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
@@ -1478,28 +1565,9 @@ export const AiMealBuilderView: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* AI Generate New Variations Quick Button */}
-                  <div className="p-3 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-xl flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-teal-600 shrink-0" />
-                      <span className="text-xs text-teal-900 font-medium">
-                        Need tailored recipes based on {patient.name}'s food preference ({patient.foodPreference})?
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => {
-                        handleRegenerateSlot(swapModalSlot.slotType);
-                        setSwapModalSlot(null);
-                      }}
-                      className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-lg shrink-0 cursor-pointer shadow-xs"
-                    >
-                      AI Synthesize 3 New Swaps
-                    </button>
-                  </div>
-
-                  {/* Catalog Recipe Cards */}
+                  {/* AI Recipe Cards */}
                   <div className="space-y-3">
-                    {filteredCatalogRecipes.map(recipe => (
+                    {filteredLibraryRecipes.slice(0, 8).map(recipe => (
                       <div 
                         key={recipe.id}
                         className="p-3.5 rounded-2xl border border-slate-200 hover:border-teal-400 bg-white hover:bg-teal-50/20 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
@@ -1508,6 +1576,11 @@ export const AiMealBuilderView: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <h4 className="text-xs font-bold text-[#183153]">{recipe.name}</h4>
                             <span className="text-[10px] px-2 py-0.5 bg-slate-100 rounded-md text-slate-700 font-semibold">{recipe.category}</span>
+                            {recipe.isAiGenerated && (
+                              <span className="text-[9px] px-1.5 py-0.2 bg-sky-50 text-sky-700 border border-sky-200 rounded font-bold">
+                                AI
+                              </span>
+                            )}
                           </div>
                           <p className="text-xs text-slate-600 leading-relaxed">{recipe.clinicalBenefit}</p>
                           <div className="text-[11px] font-mono text-slate-500 flex flex-wrap gap-2 pt-0.5">
@@ -1524,7 +1597,7 @@ export const AiMealBuilderView: React.FC = () => {
                             onClick={() => openRecipeModal(recipe)}
                             className="px-2.5 py-1.5 text-xs text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl font-medium cursor-pointer"
                           >
-                            View Recipe
+                            View
                           </button>
                           <button
                             onClick={() => {
@@ -1540,7 +1613,7 @@ export const AiMealBuilderView: React.FC = () => {
                                 carbs: recipe.carbs,
                                 fat: recipe.fat,
                                 fiber: recipe.fiber,
-                                glycemicIndex: 'Low',
+                                glycemicIndex: recipe.glycemicIndex || 'Low',
                                 ingredients: (recipe.ingredients || []).map(i => `${i.amount} ${i.item}`),
                                 instructions: recipe.steps || [],
                                 clinicalBenefit: recipe.clinicalBenefit,
@@ -1564,6 +1637,129 @@ export const AiMealBuilderView: React.FC = () => {
                               setTimeout(() => setSaveSuccessMsg(null), 3000);
                             }}
                             className="px-3 py-1.5 bg-[#183153] hover:bg-[#244673] text-white text-xs font-bold rounded-xl cursor-pointer"
+                          >
+                            + Select Recipe
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: MY RECIPE LIBRARY (CUSTOM RECIPES + ALL SAVED RECIPES) */}
+              {swapModalTab === 'recipe_library' && (
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                    <div className="relative flex-1 w-full">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type="text"
+                        placeholder="Search saved custom recipes, AI formulations, ingredients..."
+                        value={searchRecipeQuery}
+                        onChange={(e) => setSearchRecipeQuery(e.target.value)}
+                        className="w-full text-xs pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-1 overflow-x-auto w-full sm:w-auto">
+                      {['All', 'Custom', 'Saved AI', 'Protein', 'Low GI'].map(cat => (
+                        <button
+                          key={cat}
+                          onClick={() => setCategoryFilter(cat)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                            categoryFilter === cat ? 'bg-[#183153] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Recipes List */}
+                  <div className="space-y-3">
+                    {filteredLibraryRecipes.map(recipe => (
+                      <div 
+                        key={recipe.id}
+                        className="p-3.5 rounded-2xl border border-slate-200 hover:border-teal-400 bg-white hover:bg-teal-50/20 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
+                      >
+                        <div className="space-y-1 flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-xs font-bold text-[#183153]">{recipe.name}</h4>
+                            <span className="text-[10px] px-2 py-0.5 bg-slate-100 rounded-md text-slate-700 font-semibold">{recipe.category}</span>
+                            {recipe.isCustom && !recipe.isAiGenerated && (
+                              <span className="text-[9px] px-1.5 py-0.2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-bold">
+                                ✨ Custom
+                              </span>
+                            )}
+                            {recipe.isAiGenerated && (
+                              <span className="text-[9px] px-1.5 py-0.2 bg-sky-50 text-sky-700 border border-sky-200 rounded font-bold">
+                                🤖 Saved AI
+                              </span>
+                            )}
+                            {recipe.sourcePatientName && (
+                              <span className="text-[9px] text-teal-700">
+                                (for {recipe.sourcePatientName})
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-600 leading-relaxed">{recipe.clinicalBenefit}</p>
+                          <div className="text-[11px] font-mono text-slate-500 flex flex-wrap gap-2 pt-0.5">
+                            <strong className="text-amber-700">{recipe.calories} kcal</strong>
+                            <span>P: {recipe.protein}g</span>
+                            <span>C: {recipe.carbs}g</span>
+                            <span>F: {recipe.fat}g</span>
+                            <span>Portion: {recipe.servingSizeDescription}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => openRecipeModal(recipe)}
+                            className="px-2.5 py-1.5 text-xs text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl font-medium cursor-pointer"
+                          >
+                            View
+                          </button>
+                          <button
+                            onClick={() => {
+                              const newOption: MealOption = {
+                                id: `opt-swap-${Date.now()}`,
+                                slotType: swapModalSlot.slotType,
+                                name: recipe.name,
+                                description: recipe.clinicalBenefit,
+                                portion: recipe.servingSizeDescription,
+                                portionGrams: 220,
+                                calories: recipe.calories,
+                                protein: recipe.protein,
+                                carbs: recipe.carbs,
+                                fat: recipe.fat,
+                                fiber: recipe.fiber,
+                                glycemicIndex: recipe.glycemicIndex || 'Low',
+                                ingredients: (recipe.ingredients || []).map(i => `${i.amount} ${i.item}`),
+                                instructions: recipe.steps || [],
+                                clinicalBenefit: recipe.clinicalBenefit,
+                                prepTimeMinutes: (recipe.prepTimeMinutes || 0) + (recipe.cookTimeMinutes || 0),
+                                isCustom: true
+                              };
+
+                              const updatedSlots = (currentSlots || []).map(s => {
+                                if (s.slotType === swapModalSlot.slotType) {
+                                  return {
+                                    ...s,
+                                    options: [...(s.options || []), newOption],
+                                    selectedOptionId: newOption.id
+                                  };
+                                }
+                                return s;
+                              });
+
+                              commitSlotsUpdate(updatedSlots, `Added template "${recipe.name}" from Recipe Library`);
+                              setSwapModalSlot(null);
+                              setSaveSuccessMsg(`Added "${recipe.name}" to meal options!`);
+                              setTimeout(() => setSaveSuccessMsg(null), 3000);
+                            }}
+                            className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs"
                           >
                             + Select Recipe
                           </button>

@@ -26,7 +26,9 @@ import {
   Bot,
   X,
   User,
-  ExternalLink
+  ExternalLink,
+  BookOpen,
+  ChefHat
 } from 'lucide-react';
 
 interface ClinicSidebarProps {
@@ -54,7 +56,8 @@ export const ClinicSidebar: React.FC<ClinicSidebarProps> = ({
     setIsPaymentModalOpen,
     patients,
     selectedPatient,
-    getDashboardKpis
+    getDashboardKpis,
+    recipes
   } = useClinic();
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -107,6 +110,7 @@ export const ClinicSidebar: React.FC<ClinicSidebarProps> = ({
       sectionTitle: 'AI Protocols & RX',
       items: [
         { id: 'ai_meal_builder', label: 'AI Meal Planner', icon: Sparkles, badge: 'AI', badgeColor: 'bg-teal-500 text-white' },
+        { id: 'recipe_library', label: 'Recipe Library', icon: BookOpen, badge: recipes.length, badgeColor: 'bg-emerald-600 text-white' },
         { id: 'exercise_planner', label: 'Exercise Planner', icon: Dumbbell },
         { id: 'ai_copilot', label: 'Doctor AI Copilot', icon: Bot, badge: 'AI', badgeColor: 'bg-emerald-600 text-white' },
       ]

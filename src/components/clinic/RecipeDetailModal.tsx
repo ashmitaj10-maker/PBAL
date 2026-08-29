@@ -12,11 +12,13 @@ import {
   Heart, 
   Utensils,
   Layers,
-  Award
+  Award,
+  Bookmark,
+  BookmarkCheck
 } from 'lucide-react';
 
 export const RecipeDetailModal: React.FC = () => {
-  const { isRecipeModalOpen, closeRecipeModal, selectedRecipe } = useClinic();
+  const { isRecipeModalOpen, closeRecipeModal, selectedRecipe, recipes, addRecipeToLibrary } = useClinic();
 
   if (!isRecipeModalOpen || !selectedRecipe) return null;
 
@@ -199,7 +201,30 @@ export const RecipeDetailModal: React.FC = () => {
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
+        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 shrink-0">
+          <div>
+            {(() => {
+              const isSaved = recipes.some(r => r.name.toLowerCase() === selectedRecipe.name.toLowerCase());
+              if (isSaved) {
+                return (
+                  <span className="text-xs font-bold text-teal-800 flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 rounded-xl border border-teal-200">
+                    <BookmarkCheck className="w-4 h-4 text-teal-600" />
+                    <span>In Shared Recipe Library</span>
+                  </span>
+                );
+              }
+              return (
+                <button
+                  onClick={() => addRecipeToLibrary(selectedRecipe)}
+                  className="px-4 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-900 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Bookmark className="w-4 h-4 text-teal-600" />
+                  <span>Save to Recipe Library</span>
+                </button>
+              );
+            })()}
+          </div>
+
           <button
             onClick={closeRecipeModal}
             className="px-5 py-2 rounded-xl bg-[#183153] hover:bg-[#244673] text-white text-xs font-bold transition-all cursor-pointer"

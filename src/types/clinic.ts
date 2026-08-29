@@ -455,13 +455,21 @@ export interface RecipeDetail {
   carbs: number;
   fat: number;
   fiber: number;
-  micronutrients: MicronutrientProfile;
+  glycemicIndex?: 'Low' | 'Medium' | 'High' | string;
+  micronutrients?: MicronutrientProfile;
   ingredients: { item: string; amount: string; notes?: string }[];
   steps: string[];
   dietaryTags: string[];
-  chefTip: string;
+  chefTip?: string;
   clinicalBenefit: string;
   imageUrl?: string;
+  isCustom?: boolean;
+  isAiGenerated?: boolean;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  sourcePatientId?: string;
+  sourcePatientName?: string;
 }
 
 export interface PatientDailyLog {
